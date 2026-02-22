@@ -1,0 +1,259 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<GenRoBag><menu path="menu.py" ext="py"><en_repositories base="Repositories" it="Repository"></en_repositories>
+<en_organizations base="Organizations" it="Organizzazioni"></en_organizations>
+<en_issues base="Issues" it="::NN"></en_issues>
+<en_pull_requests base="Pull Requests" it="Pull request"></en_pull_requests>
+<en_artifacts base="Artifacts" it="Artifacts"></en_artifacts>
+<en_github_users base="GitHub Users" it="GitHub Users"></en_github_users>
+<en_github_raw_events base="GitHub Raw Events" it="GitHub Raw Events"></en_github_raw_events>
+<en_utility_tables fr="tables utilitaires" de="Utility-Tabellen" en="Utility tables" it="Tabelle utilità" base="Utility tables"></en_utility_tables></menu>
+<model><_packages><adm><user path="model/_packages/adm/user.py" ext="py"><en_github_user base="GitHub user" it="Utente GitHub"></en_github_user></user></adm></_packages>
+<gh_artifact path="model/gh_artifact.py" ext="py"><en_github_artifact base="GitHub Artifact" it="GitHub Artifact"></en_github_artifact>
+<en_github_artifacts base="GitHub Artifacts" it="GitHub Artifacts"></en_github_artifacts>
+<en_github_id base="GitHub ID" it="ID GitHub"></en_github_id>
+<en_organization base="Organization" it="Organizzazione"></en_organization>
+<en_repository base="Repository" it="::NN"></en_repository>
+<en_owner base="Owner" it="Proprietario"></en_owner>
+<en_name base="Name" de="Name" en="Name" fr="Nom" it="Nome"></en_name>
+<en_package_type base="Package Type" it="Tipo"></en_package_type>
+<en_visibility base="Visibility" it="Visibilità"></en_visibility>
+<en_version_count base="Version Count" it="Contatore versioni"></en_version_count>
+<en_api_url base="API URL" it="URL API"></en_api_url>
+<en_web_url base="Web URL" it="URL Web"></en_web_url>
+<en_github_created base="GitHub Created" it="Creato su GitHub"></en_github_created>
+<en_github_updated base="GitHub Updated" it="GitHub aggiornato"></en_github_updated>
+<en_metadata base="Metadata" de="Metadata" en="Metadata" fr="Métadonnées" it="Metadata"></en_metadata>
+<en_synced_versions base="Synced Versions" it="Versioni sincronizzate"></en_synced_versions></gh_artifact>
+<gh_artifact_version path="model/gh_artifact_version.py" ext="py"><en_artifact_version base="Artifact Version" it="Versione artifact"></en_artifact_version>
+<en_artifact_versions base="Artifact Versions" it="Versioni artifact"></en_artifact_versions>
+<en_github_id base="GitHub ID" it="ID GitHub"></en_github_id>
+<en_artifact base="Artifact" it="Artifact"></en_artifact>
+<en_version_name base="Version Name" it="Nome della versione"></en_version_name>
+<en_description base="Description" en="Description" it="Descrizione"></en_description>
+<en_license base="License" it="Licenza"></en_license>
+<en_api_url base="API URL" it="URL API"></en_api_url>
+<en_web_url base="Web URL" it="URL Web"></en_web_url>
+<en_artifact_web_url base="Artifact Web URL" it="URL Web artifact"></en_artifact_web_url>
+<en_github_created base="GitHub Created" it="Creato su GitHub"></en_github_created>
+<en_github_updated base="GitHub Updated" it="GitHub aggiornato"></en_github_updated>
+<en_github_deleted base="GitHub Deleted" it="GitHub eliminato"></en_github_deleted>
+<en_metadata base="Metadata" de="Metadata" en="Metadata" fr="Métadonnées" it="Metadata"></en_metadata></gh_artifact_version>
+<gh_repo_label path="model/gh_repo_label.py" ext="py"><en_repository_label base="Repository Label" it="Etichetta del repository"></en_repository_label>
+<en_repository_labels base="Repository Labels" it="Etichette del repository"></en_repository_labels>
+<en_github_id base="GitHub ID" it="ID GitHub"></en_github_id>
+<en_repository base="Repository" it="::NN"></en_repository>
+<en_name base="Name" de="Name" en="Name" fr="Nom" it="Nome"></en_name>
+<en_color base="Color" it="Colore"></en_color>
+<en_description base="Description" en="Description" it="Descrizione"></en_description></gh_repo_label>
+<gh_topic path="model/gh_topic.py" ext="py"><en_github_topic base="GitHub Topic" it="Argomento GitHub"></en_github_topic>
+<en_github_topics base="GitHub Topics" it="Argomenti GitHub"></en_github_topics>
+<en_topic_name base="Topic Name" it="Nome dell'argomento"></en_topic_name></gh_topic>
+<gh_topic_link path="model/gh_topic_link.py" ext="py"><en_github_topic_link base="GitHub Topic Link" it="Link all'argomento GitHub"></en_github_topic_link>
+<en_github_topic_links base="GitHub Topic Links" it="Collegamenti agli argomenti di GitHub"></en_github_topic_links>
+<en_topic base="Topic" de="Thema" en="Topic" fr="Sujet" it="Argomento"></en_topic>
+<en_repository base="Repository" it="::NN"></en_repository></gh_topic_link>
+<gh_user path="model/gh_user.py" ext="py"><en_github_user base="GitHub User" it="Utente GitHub"></en_github_user>
+<en_github_users base="GitHub Users" it="Utenti GitHub"></en_github_users>
+<en_github_id base="GitHub ID" it="ID GitHub"></en_github_id>
+<en_login_name base="Login name" it="Nome Login"></en_login_name>
+<en_avatar_url base="Avatar URL" it="URL dell'avatar"></en_avatar_url>
+<en_profile_url base="Profile URL" it="URL del profilo"></en_profile_url>
+<en_type fr="Type" de="Art" en="Type" it="Tipo" base="Type"></en_type>
+<en_metadata base="Metadata" de="Metadata" en="Metadata" fr="Métadonnées" it="Metadata"></en_metadata>
+<en_adm_user base="Adm User" it="Utente Adm"></en_adm_user></gh_user>
+<gh_user_connection path="model/gh_user_connection.py" ext="py"><en_github_user_connection base="GitHub User Connection" it="Connessione utente GitHub"></en_github_user_connection>
+<en_github_user_connections base="GitHub User Connections" it="Connessioni utente GitHub"></en_github_user_connections>
+<en_github_user base="GitHub User" it="Utente GitHub"></en_github_user>
+<en_repository_role base="Repository Role" it="Ruolo del repository"></en_repository_role>
+<en_membership base="Membership" it="Iscrizione"></en_membership>
+<en_connection_type base="Connection Type" it="Tipo di connessione"></en_connection_type>
+<en_issue base="Issue" it="::NN"></en_issue>
+<en_pull_request base="Pull Request" it="Pull request"></en_pull_request>
+<en_organization base="Organization" it="Organizzazione"></en_organization>
+<en_repository base="Repository" it="::NN"></en_repository></gh_user_connection>
+<issue path="model/issue.py" ext="py"><en_issue base="Issue" it="::NN"></en_issue>
+<en_issues base="Issues" it="::NN"></en_issues>
+<en_github_id base="GitHub ID" it="ID GitHub"></en_github_id>
+<en_repository base="Repository" it="::NN"></en_repository>
+<en_author base="Author" de="Verfasser" en="Author" fr="Auteur" it="Autore"></en_author>
+<en_number base="Number" it="Numero"></en_number>
+<en_title base="Title" de="Titel" en="Title" fr="Titre" it="Titolo"></en_title>
+<en_body base="Body" de="Körper" en="Body" fr="Corps" it="Body"></en_body>
+<en_state base="State" it="Stato"></en_state>
+<en_state_reason base="State Reason" it="Motivo dello stato"></en_state_reason>
+<en_url base="URL" en="Url" it="Url"></en_url>
+<en_github_created base="GitHub Created" it="Creato su GitHub"></en_github_created>
+<en_github_updated base="GitHub Updated" it="GitHub aggiornato"></en_github_updated>
+<en_github_closed base="GitHub Closed" it="Chiuso su GitHub"></en_github_closed>
+<en_metadata base="Metadata" de="Metadata" en="Metadata" fr="Métadonnées" it="Metadata"></en_metadata>
+<en_labels base="Labels" it="Etichette"></en_labels>
+<en_milestone base="Milestone" it="Milestone"></en_milestone>
+<en_comments base="Comments" it="Commenti"></en_comments>
+<en_connected base="Connected" it="Connesso"></en_connected>
+<en_mine_cnt_ base="Mine Cnt." it="# Miei"></en_mine_cnt_></issue>
+<organization path="model/organization.py" ext="py"><en_organization base="Organization" it="Organizzazione"></en_organization>
+<en_organizations base="Organizations" it="Organizzazioni"></en_organizations>
+<en_github_id base="GitHub ID" it="ID GitHub"></en_github_id>
+<en_login_name base="Login name" it="Nome Login"></en_login_name>
+<en_name base="Name" de="Name" en="Name" fr="Nom" it="Nome"></en_name>
+<en_org_user base="Org User" it="Utente dell'organizzazione"></en_org_user>
+<en_url base="URL" en="Url" it="Url"></en_url>
+<en_avatar_url base="Avatar URL" it="URL dell'avatar"></en_avatar_url>
+<en_github_created base="GitHub Created" it="Creato su GitHub"></en_github_created>
+<en_github_updated base="GitHub Updated" it="GitHub aggiornato"></en_github_updated>
+<en_raw_payload base="Raw Payload" it="Raw Payload"></en_raw_payload>
+<en_num_repositories base="Num repositories" it="Repository Num"></en_num_repositories></organization>
+<pull_request path="model/pull_request.py" ext="py"><en_pull_request base="Pull Request" it="Pull request"></en_pull_request>
+<en_pull_requests base="Pull Requests" it="Pull request"></en_pull_requests>
+<en_github_id base="GitHub ID" it="ID GitHub"></en_github_id>
+<en_repository base="Repository" it="::NN"></en_repository>
+<en_author base="Author" de="Verfasser" en="Author" fr="Auteur" it="Autore"></en_author>
+<en_number base="Number" it="Numero"></en_number>
+<en_title base="Title" de="Titel" en="Title" fr="Titre" it="Titolo"></en_title>
+<en_body base="Body" de="Körper" en="Body" fr="Corps" it="Body"></en_body>
+<en_state base="State" it="Stato"></en_state>
+<en_url base="URL" en="Url" it="Url"></en_url>
+<en_draft base="Draft" it="Bozza" en="Draft"></en_draft>
+<en_merged base="Merged" it="Merged"></en_merged>
+<en_mergeable base="Mergeable" it="Mergeable"></en_mergeable>
+<en_mergeable_state base="Mergeable State" it="Mergeable State"></en_mergeable_state>
+<en_head_branch base="Head Branch" it="Head Branch"></en_head_branch>
+<en_head_sha base="Head SHA" it="Head SHA"></en_head_sha>
+<en_base_branch base="Base Branch" it="Base Branch"></en_base_branch>
+<en_base_sha base="Base SHA" it="Base SHA"></en_base_sha>
+<en_merge_commit_sha base="Merge Commit SHA" it="Merge Commit SHA"></en_merge_commit_sha>
+<en_github_created base="GitHub Created" it="Creato su GitHub"></en_github_created>
+<en_github_updated base="GitHub Updated" it="GitHub aggiornato"></en_github_updated>
+<en_github_closed base="GitHub Closed" it="Chiuso su GitHub"></en_github_closed>
+<en_github_merged base="GitHub Merged" it="GitHub Merged"></en_github_merged>
+<en_metadata base="Metadata" de="Metadata" en="Metadata" fr="Métadonnées" it="Metadata"></en_metadata>
+<en_labels base="Labels" it="Etichette"></en_labels>
+<en_milestone base="Milestone" it="Milestone"></en_milestone>
+<en_comments base="Comments" it="Commenti"></en_comments>
+<en_review_comments base="Review Comments" it="Review Comments"></en_review_comments>
+<en_commits base="Commits" it="Commits"></en_commits>
+<en_additions base="Additions" it="Aggiunte"></en_additions>
+<en_deletions base="Deletions" it="Eliminazioni"></en_deletions>
+<en_changed_files base="Changed Files" it="File modificati"></en_changed_files>
+<en_connected base="Connected" it="Connesso"></en_connected>
+<en_mine_cnt_ base="Mine Cnt." it="# Miei"></en_mine_cnt_></pull_request>
+<repo_group path="model/repo_group.py" ext="py"><en_repository_group base="Repository Group" it="Gruppo di repository"></en_repository_group>
+<en_repository_groups base="Repository Groups" it="Gruppi di repository"></en_repository_groups>
+<en_code base="Code" en="Code" it="Codice"></en_code>
+<en_name base="Name" de="Name" en="Name" fr="Nom" it="Nome"></en_name>
+<en_description base="Description" en="Description" it="Descrizione"></en_description>
+<en_color base="Color" it="Colore"></en_color></repo_group>
+<repo_role path="model/repo_role.py" ext="py"><en_repository_role base="Repository Role" it="Ruolo del repository"></en_repository_role>
+<en_repository_roles base="Repository Roles" it="Ruoli del repository"></en_repository_roles>
+<en_code base="Code" en="Code" it="Codice"></en_code>
+<en_name base="Name" de="Name" en="Name" fr="Nom" it="Nome"></en_name>
+<en_repository_level base="Repository Level" it="Livello repository"></en_repository_level></repo_role>
+<repository path="model/repository.py" ext="py"><en_repository base="Repository" it="::NN"></en_repository>
+<en_repositories base="Repositories" it="Repository"></en_repositories>
+<en_github_id base="GitHub ID" it="ID GitHub"></en_github_id>
+<en_name base="Name" de="Name" en="Name" fr="Nom" it="Nome"></en_name>
+<en_full_name base="Full Name" it="Nome completo" en="Full Name"></en_full_name>
+<en_private fr="Privé" de="Privat" en="Private" it="Privato" base="Private"></en_private>
+<en_archived base="Archived" it="Archiviato"></en_archived>
+<en_organization base="Organization" it="Organizzazione"></en_organization>
+<en_description base="Description" en="Description" it="Descrizione"></en_description>
+<en_descr_ base="Descr." it="Descr."></en_descr_>
+<en_default_branch base="Default Branch" it="Default Branch"></en_default_branch>
+<en_url base="URL" en="Url" it="Url"></en_url>
+<en_metadata base="Metadata" de="Metadata" en="Metadata" fr="Métadonnées" it="Metadata"></en_metadata>
+<en_webhook_sync base="Webhook Sync" it="Sincronizzazione Webhook"></en_webhook_sync>
+<en_repository_group base="Repository Group" it="Gruppo di repository"></en_repository_group>
+<en_closure_date base="Closure Date" it="Data di chiusura"></en_closure_date>
+<en_closure_reason base="Closure Reason" it="Motivo della chiusura"></en_closure_reason>
+<en_internal_notes base="Internal Notes" it="Note interne"></en_internal_notes>
+<en_avatar_url base="Avatar URL" it="URL dell'avatar"></en_avatar_url>
+<en_github_created base="GitHub Created" it="Creato su GitHub"></en_github_created>
+<en_github_updated base="GitHub Updated" it="GitHub aggiornato"></en_github_updated>
+<en_last_push base="Last Push" it="Last Push"></en_last_push>
+<en_open_issues base="Open Issues" it="Issues aperte"></en_open_issues>
+<en_open_prs base="Open PRs" it="PR aperti"></en_open_prs>
+<en_connected base="Connected" it="Connesso"></en_connected>
+<en_has_my_issues base="Has My Issues" it="Ha mie Issues"></en_has_my_issues>
+<en_has_assigned_issues base="Has Assigned Issues" it="Ha Issues assegnate"></en_has_assigned_issues>
+<en_has_my_prs base="Has My PRs" it="Ha miei PR"></en_has_my_prs>
+<en_has_assigned_prs base="Has Assigned PRs" it="Ha PR assegnate"></en_has_assigned_prs>
+<en_needs_attention base="Needs Attention" it="Richiede attenzione"></en_needs_attention></repository>
+<webhook_event path="model/webhook_event.py" ext="py"><en_webhook_event base="Webhook Event" it="Evento Webhook"></en_webhook_event>
+<en_webhook_events base="Webhook Events" it="Eventi Webhook"></en_webhook_events>
+<en_delivery_id base="Delivery ID" it="Delivery ID"></en_delivery_id>
+<en_event base="Event" de="Ereignis" en="Event" fr="Événement" it="Evento"></en_event>
+<en_action base="Action" it="Azione"></en_action>
+<en_repository base="Repository" it="::NN"></en_repository>
+<en_organization base="Organization" it="Organizzazione"></en_organization>
+<en_received_at base="Received At" it="Ricevuto il"></en_received_at>
+<en_payload base="Payload" it="Payload"></en_payload>
+<en_issue base="Issue" it="::NN"></en_issue>
+<en_pull_request base="Pull request" it="Pull request"></en_pull_request></webhook_event></model>
+<resources><preference path="resources/preference.py" ext="py"><en_access_token base="Access Token" it="Token di accesso"></en_access_token>
+<en_webhook_secret base="Webhook Secret" it="Segreto Webhook"></en_webhook_secret>
+<en_commit_policy base="Commit Policy" it="Policy commit"></en_commit_policy></preference>
+<tables><gh_artifact><th_gh_artifact path="resources/tables/gh_artifact/th_gh_artifact.py" ext="py"><en_versions base="Versions" it="Versioni"></en_versions>
+<en_metadata base="Metadata" de="Metadata" en="Metadata" fr="Métadonnées" it="Metadata"></en_metadata>
+<en_update_from_github base="Update from GitHub" it="Aggiornamento da GitHub"></en_update_from_github>
+<en_sync base="Sync" it="Sincr."></en_sync></th_gh_artifact></gh_artifact>
+<issue><th_issue path="resources/tables/issue/th_issue.py" ext="py"><en_number base="Number" it="Numero"></en_number>
+<en_title base="Title" de="Titel" en="Title" fr="Titre" it="Titolo"></en_title>
+<en_repository base="Repository" it="::NN"></en_repository>
+<en_author base="Author" de="Verfasser" en="Author" fr="Auteur" it="Autore"></en_author>
+<en_all fr="Tous" de="Alle" en="All" it="Tutto" base="All"></en_all>
+<en_my_issues base="My Issues" it="Le mie issues"></en_my_issues>
+<en_connected base="Connected" it="Connesso"></en_connected>
+<en_body base="Body" de="Körper" en="Body" fr="Corps" it="Body"></en_body></th_issue></issue>
+<organization><th_organization path="resources/tables/organization/th_organization.py" ext="py"><en_repositories base="Repositories" it="Repository"></en_repositories>
+<en_artifacts base="Artifacts" it="Artifacts"></en_artifacts>
+<en_members base="Members" it="Membri"></en_members>
+<en_events base="Events" it="Eventi"></en_events>
+<en_update_from_github base="Update from GitHub" it="Aggiornamento da GitHub"></en_update_from_github>
+<en_deep_sync_selected base="Deep Sync Selected" it="Deep Sync selezionato"></en_deep_sync_selected>
+<en_create_adm_users base="Create ADM Users" it="Creazione di utenti ADM"></en_create_adm_users></th_organization></organization>
+<pull_request><th_pull_request path="resources/tables/pull_request/th_pull_request.py" ext="py"><en_number base="Number" it="Numero"></en_number>
+<en_title base="Title" de="Titel" en="Title" fr="Titre" it="Titolo"></en_title>
+<en_repository base="Repository" it="::NN"></en_repository>
+<en_author base="Author" de="Verfasser" en="Author" fr="Auteur" it="Autore"></en_author>
+<en_all fr="Tous" de="Alle" en="All" it="Tutto" base="All"></en_all>
+<en_my_prs base="My PRs" it="I miei PR"></en_my_prs>
+<en_connected base="Connected" it="Connesso"></en_connected>
+<en_from_branch base="From Branch" it="From Branch"></en_from_branch>
+<en_to_branch base="To Branch" it="To Branch"></en_to_branch>
+<en_body base="Body" de="Körper" en="Body" fr="Corps" it="Body"></en_body></th_pull_request></pull_request>
+<repository><action><import_repositories path="resources/tables/repository/action/import_repositories.py" ext="py"><en_organizations base="Organizations" it="Organizzazioni"></en_organizations>
+<en_repositories base="Repositories" it="Repository"></en_repositories></import_repositories></action>
+<th_repository path="resources/tables/repository/th_repository.py" ext="py"><en_priv_ base="Priv." en="" it="Priv."></en_priv_>
+<en_mine base="Mine" it="Miei"></en_mine>
+<en_status fr="Statut" de="Status" en="Status" it="Stato" base="Status"></en_status>
+<en_counters base="Counters" en="Counters" it="Contatori"></en_counters>
+<en_issues base="Issues" it="::NN"></en_issues>
+<en_prs base="PRs" it="PR"></en_prs>
+<en_config base="Config" it="Configurazione" en="Config"></en_config>
+<en_sync base="Sync" it="Sincr."></en_sync>
+<en_url base="Url" en="Url" it="Url"></en_url>
+<en_name base="Name" de="Name" en="Name" fr="Nom" it="Nome"></en_name>
+<en_full_name base="Full Name" it="Nome completo" en="Full Name"></en_full_name>
+<en_organization base="Organization" it="Organizzazione"></en_organization>
+<en_group fr="Groupe" en="Group" de="Gruppe" it="Gruppi utenza" base="Group"></en_group>
+<en_all fr="Tous" de="Alle" en="All" it="Tutto" base="All"></en_all>
+<en_needs_attention base="Needs Attention" it="Richiede attenzione"></en_needs_attention>
+<en_open base="Open" en="Open" it="Aperto"></en_open>
+<en_closed base="Closed" it="Chiuso" en="Closed"></en_closed>
+<en_archived base="Archived" it="Archiviato"></en_archived>
+<en_update_from_github base="Update from GitHub" it="Aggiornamento da GitHub"></en_update_from_github>
+<en_pull_requests base="Pull Requests" it="Pull request"></en_pull_requests>
+<en_topics base="Topics" it="Argomenti"></en_topics>
+<en_labels base="Labels" it="Etichette"></en_labels>
+<en_artifacts base="Artifacts" it="Artifacts"></en_artifacts>
+<en_collaborators base="Collaborators" it="Collaboratori"></en_collaborators>
+<en_pull_from_github base="Pull from GitHub" it="Pull da GitHub"></en_pull_from_github>
+<en_push_to_github base="Push to GitHub" it="Push a GitHub"></en_push_to_github>
+<en_avatar base="Avatar" it=""></en_avatar></th_repository></repository></tables></resources>
+<webpages><auth path="webpages/auth.py" ext="py"><en_something_got_wrong_no_code_received base="Something got wrong, no code received" it="Qualcosa è andato storto, nessun codice ricevuto"></en_something_got_wrong_no_code_received>
+<en_something_got_wrong_no_authentication_mode_specified base="Something got wrong, no authentication mode specified" it="Qualcosa è andato storto, nessuna modalità di autenticazione specificata"></en_something_got_wrong_no_authentication_mode_specified>
+<en_something_got_wrong_authentication_failed base="Something got wrong, authentication failed" it="Qualcosa è andato storto, autenticazione fallita"></en_something_got_wrong_authentication_failed></auth>
+<ep path="webpages/ep.py" ext="py"><en_github_webhook_secret_is_not_configured base="GitHub webhook secret is not configured" it="Il segreto del webhook di GitHub non è configurato"></en_github_webhook_secret_is_not_configured>
+<en_missing_x_hub_signature_256_header base="Missing X-Hub-Signature-256 header" it="Intestazione X-Hub-Signature-256 mancante"></en_missing_x_hub_signature_256_header>
+<en_invalid_webhook_signature base="Invalid webhook signature" it="Firma webhook non valida"></en_invalid_webhook_signature>
+<en_failed_to_parse_webhook_payload_str_e_ base="Failed to parse webhook payload: {str(e)}" it="Analisi del payload del webhook non riuscita: {str (e)}"></en_failed_to_parse_webhook_payload_str_e_></ep></webpages></GenRoBag>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenRoBag>
+    <packages>
+        <gnrgh/>
+        <adm/>
+    </packages>
+    <db dbname="gnrgh" implementation="postgres"
+        host="localhost" port="5432"
+        username="postgres"/>
+</GenRoBag>

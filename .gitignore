@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# GenroPy
+sites/*/pages/
+sites/*/data/
+sites/*/tmp/
+sites/*/audit/
+sites/*/webtools/
+instances/*/data/
+instances/*/tmp/

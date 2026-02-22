@@ -19,7 +19,7 @@ class Package(GnrDboPackage):
         Returns:
             GithubClient instance
         """
-        from .lib.github_client import GithubClient
+        from gnrpkg.gnrgh.github_client import GithubClient
         access_token = self.db.application.getPreference('access_token', pkg='gnrgh')
         return GithubClient(access_token=access_token or None)
 

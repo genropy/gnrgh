@@ -18,6 +18,7 @@ class View(BaseComponent):
         cs.fieldcell('closure_date', width='8em')
 
         cs = r.columnset('counters', name='!![en]Counters', background='darkgreen')
+        cs.fieldcell('branch_count', width='5em', name='!![en]Branches')
         cs.fieldcell('open_issues_count', width='5em', name='!![en]Issues')
         cs.fieldcell('open_pull_requests_count', width='5em', name='!![en]PRs')
 
@@ -25,9 +26,20 @@ class View(BaseComponent):
         cs.fieldcell('repo_group', width='10em')
         cs.fieldcell('webhook_sync', width='3em', name='!![en]Sync', semaphore=True)
 
+        r.fieldcell('last_commit_ts', width='12em', name='!![en]Last Commit')
         r.fieldcell('last_sync_ts', width='12em', name='!![en]Last Sync')
         r.fieldcell('html_url', name='!![en]Url', width='2.5em',
                template='<a href="$html_url" target="_blank"><img src="/_rsrc/common/css_icons/svg/16/link_connected.svg" height="13px"/></a>')
+
+    def th_groupedStruct(self, struct):
+        """By last commit date"""
+        r = struct.view().rows()
+        r.fieldcell('last_commit_ts', name='!![en]Year', width='6em', group_aggr='YYYY')
+        r.fieldcell('last_commit_ts', name='!![en]Month', width='8em', group_aggr='YYYY-MM')
+        r.cell('_grp_count', name='!![en]Repos', width='5em', group_aggr='sum', dtype='L', childname='_grp_count')
+        r.fieldcell('branch_count', width='6em', name='!![en]Branches', dtype='L', group_aggr='sum')
+        r.fieldcell('open_issues_count', width='6em', name='!![en]Issues', dtype='L', group_aggr='sum')
+        r.fieldcell('open_pull_requests_count', width='6em', name='!![en]PRs', dtype='L', group_aggr='sum')
 
     def th_order(self):
         return 'name'
@@ -108,13 +120,15 @@ class ViewFromOrganization(BaseComponent):
         r.fieldcell('private', width='3em', name='!![en]Priv.', tick=True)
         r.fieldcell('archived', width='5em', tick=True)
         cs = r.columnset('counters', name='!![en]Counters', background='#5b9bd5')
-        cs.fieldcell('open_issues_count', width='5em', name='Issues')
-        cs.fieldcell('open_pull_requests_count', width='5em', name='PRs')
+        cs.fieldcell('branch_count', width='5em', name='!![en]Branches')
+        cs.fieldcell('open_issues_count', width='5em', name='!![en]Issues')
+        cs.fieldcell('open_pull_requests_count', width='5em', name='!![en]PRs')
         cs = r.columnset('config', name='!![en]Config', background='darkorange')
         cs.fieldcell('repo_group', width='10em')
         cs.fieldcell('commit_policy', width='6em')
         cs.fieldcell('webhook_sync', width='3em', name='!![en]Sync', semaphore=True)
-        r.fieldcell('pushed_at', width='10em', name='Last Push')
+        r.fieldcell('last_commit_ts', width='12em', name='!![en]Last Commit')
+        r.fieldcell('pushed_at', width='10em', name='!![en]Last Push')
         r.fieldcell('last_sync_ts', width='12em', name='!![en]Last Sync')
 
     def th_top_custom(self,top):

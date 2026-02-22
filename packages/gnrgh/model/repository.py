@@ -97,10 +97,16 @@ class Table(object):
                         where='$repo_id=#THIS.id AND $received_at > #THIS.last_sync_ts'),
             dtype='B', name_long='!![en]Pending Events')
 
-        tbl.formulaColumn('last_commit_ts',
+        tbl.formulaColumn('branch_count',
             select=dict(table='gnrgh.branch',
-                        columns='$last_commit_ts',
-                        where='$repository_id=#THIS.id AND $is_default IS TRUE'),
+                        columns='COUNT(*)',
+                        where='$repository_id=#THIS.id'),
+            dtype='L', name_long='!![en]Branches')
+
+        tbl.formulaColumn('last_commit_ts',
+            select=dict(table='gnrgh.commit',
+                        columns='MAX($author_date)',
+                        where='@branch_id.repository_id=#THIS.id'),
             dtype='DH', name_long='!![en]Last Commit')
 
     def importRepository(self, remote_repo_data, pkey=None, organization_id=None):

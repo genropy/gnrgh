@@ -1,0 +1,19 @@
+<?xml version="1.0" ?>
+<GenRoBag>
+    <db dbname='gnrgh' implementation='postgres'/>
+    <packages>
+        <gnrcore_sys pkgcode="gnrcore:sys"/>
+        <gnrcore_adm pkgcode="gnrcore:adm"/>
+        <gnrgh/>
+    </packages>
+    <authentication pkg="adm">
+        <py_auth defaultTags="user" method="authenticate" pkg="adm"/>
+        <xml_auth defaultTags="user,xml">
+            <admin pwd="admin" tags="superadmin,_DEV_,admin,user"/>
+        </xml_auth>
+    </authentication>
+    <site>
+        <wsgi mainpackage="gnrgh"/>
+        <options liveUpdate="*"/>
+    </site>
+</GenRoBag>

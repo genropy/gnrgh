@@ -10,7 +10,6 @@ class Table(object):
             'repository.id', relation_name='branches', mode='foreignkey', onDelete='cascade')
         tbl.column('name', name_long='!![en]Name', validate_notnull=True)
         tbl.column('commit_sha', name_long='!![en]Commit SHA')
-        tbl.column('last_commit_ts', dtype='DH', name_long='!![en]Last Commit')
         tbl.column('protected', dtype='B', name_long='!![en]Protected')
         tbl.column('is_default', dtype='B', name_long='!![en]Default Branch')
 
@@ -23,6 +22,12 @@ class Table(object):
         tbl.formulaColumn('repo_full_name',
             '@repository_id.full_name',
             name_long='!![en]Repository')
+
+        tbl.formulaColumn('last_commit_ts',
+            select=dict(table='gnrgh.commit',
+                        columns='MAX($author_date)',
+                        where='$branch_id=#THIS.id'),
+            dtype='DH', name_long='!![en]Last Commit')
 
     def importBranch(self, remote_branch_data, repository_id=None):
         """Import a single branch from GitHub API data.

@@ -24,11 +24,11 @@ class Main(BaseResourceAction):
         ).fetch()
         github_service = self.db.package('gnrgh').getGithubClient()
         branch_tbl = self.db.table('gnrgh.branch')
-        commit_tbl = self.db.table('gnrgh.commit')
         issue_tbl = self.db.table('gnrgh.issue')
         pr_tbl = self.db.table('gnrgh.pull_request')
         topic_link_tbl = self.db.table('gnrgh.gh_topic_link')
         label_tbl = self.db.table('gnrgh.gh_repo_label')
+        commit_tbl = self.db.table('gnrgh.commit')
         connection_tbl = self.db.table('gnrgh.gh_user_connection')
 
         for row in self.btc.thermo_wrapper(rows, line_code='repos', message='!![en]Repositories'):
@@ -41,32 +41,47 @@ class Main(BaseResourceAction):
             branches_data = github_service.getBranches(owner=owner, repo=repo_name)
             branch_tbl.importBranches(branches_data, repository_id=repository_id)
 
-            # Import commits for each branch according to policy
-            branches = branch_tbl.query(
-                where='$repository_id=:repo_id',
-                repo_id=repository_id,
-                columns='$id,$name'
-            ).fetch()
-            for br in self.btc.thermo_wrapper(branches, line_code='detail', message='!![en]Branches'):
-                limit, since = self._resolve_commit_policy(
-                    organization_id=row.get('organization_id'),
-                    repository_id=repository_id,
-                    branch_id=br['id']
-                )
-                if limit == 0:
-                    continue
+            # Commits
+            max_count, since_date = self._resolve_commit_policy(
+                organization_id=row.get('organization_id'),
+                repository_id=repository_id)
+            if max_count != 0:
                 kw = {}
-                if since:
-                    kw['since'] = since.isoformat()
+                if since_date:
+                    kw['since'] = since_date.isoformat()
                 commits_data = github_service.getCommits(
                     owner=owner, repo=repo_name,
-                    sha=br['name'], per_page=min(limit or 100, 100),
-                    paginate=bool(since),
-                    **kw
-                )
-                if limit and not since:
-                    commits_data = commits_data[:limit]
-                commit_tbl.importCommits(commits_data, branch_id=br['id'])
+                    per_page=min(max_count or 100, 100),
+                    paginate=since_date is not None,
+                    **kw)
+                if max_count and not since_date:
+                    commits_data = list(commits_data)[:max_count]
+                commit_tbl.importCommits(commits_data, repository_id=repository_id)
+
+                # Link commits to main branches (master/main, develop/development)
+                key_branches = branch_tbl.query(
+                    where="$repository_id=:repo_id AND $name IN :names",
+                    repo_id=repository_id,
+                    names=['master', 'main', 'develop', 'development'],
+                    columns='$id,$name'
+                ).fetch()
+                for br in key_branches:
+                    kw_br = {}
+                    if since_date:
+                        kw_br['since'] = since_date.isoformat()
+                    br_commits = github_service.getCommits(
+                        owner=owner, repo=repo_name,
+                        sha=br['name'],
+                        per_page=min(max_count or 100, 100),
+                        paginate=since_date is not None,
+                        **kw_br)
+                    if max_count and not since_date:
+                        br_commits = list(br_commits)[:max_count]
+                    commit_tbl.importCommits(br_commits,
+                        repository_id=repository_id,
+                        branch_id=br['id'])
+                    with branch_tbl.recordToUpdate(pkey=br['id']) as br_rec:
+                        br_rec['last_sync_ts'] = datetime.now()
 
             issues = github_service.getIssues(owner=owner, repo=repo_name, state='all')
             for issue_data in self.btc.thermo_wrapper(issues, line_code='detail', message='!![en]Issues'):

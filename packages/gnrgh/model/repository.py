@@ -106,7 +106,7 @@ class Table(object):
         tbl.formulaColumn('last_commit_ts',
             select=dict(table='gnrgh.commit',
                         columns='MAX($author_date)',
-                        where='@branch_id.repository_id=#THIS.id'),
+                        where='$repository_id=#THIS.id'),
             dtype='DH', name_long='!![en]Last Commit')
 
     def importRepository(self, remote_repo_data, pkey=None, organization_id=None):

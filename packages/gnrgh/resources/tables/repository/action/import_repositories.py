@@ -52,7 +52,7 @@ class Main(BaseResourceAction):
                         owner=owner, repo=repo_name,
                         sha=br['name'], per_page=5, paginate=False
                     )
-                    commit_tbl.importCommits(commits_data, branch_id=br['id'])
+                    commit_tbl.importCommits(commits_data, repository_id=repository_id, branch_id=br['id'])
 
                 self.db.commit()
 

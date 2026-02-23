@@ -15,19 +15,29 @@ class Table(object):
 
         # Commit policy (overrides repository level)
         tbl.column('commit_policy', name_long='!![en]Commit Policy')
+        tbl.column('last_sync_ts', dtype='DH', name_long='!![en]Last Sync')
 
         tbl.compositeColumn('repo_branch', columns='repository_id,name', unique=True)
 
-        # Formula columns
-        tbl.formulaColumn('repo_full_name',
-            '@repository_id.full_name',
-            name_long='!![en]Repository')
+        # Alias columns
+        tbl.aliasColumn('organization_name', '@repository_id.@organization_id.login',
+                        name_long='!![en]Organization')
+        tbl.aliasColumn('repo_name', '@repository_id.name',
+                        name_long='!![en]Repository Name')
+        tbl.aliasColumn('repo_full_name', '@repository_id.full_name',
+                        name_long='!![en]Repository')
 
         tbl.formulaColumn('last_commit_ts',
-            select=dict(table='gnrgh.commit',
-                        columns='MAX($author_date)',
+            select=dict(table='gnrgh.branch_commit',
+                        columns='MAX(@commit_id.author_date)',
                         where='$branch_id=#THIS.id'),
             dtype='DH', name_long='!![en]Last Commit')
+
+        tbl.formulaColumn('commit_count',
+            select=dict(table='gnrgh.branch_commit',
+                        columns='COUNT($id)',
+                        where='$branch_id=#THIS.id'),
+            dtype='L', name_long='!![en]Commits')
 
     def importBranch(self, remote_branch_data, repository_id=None):
         """Import a single branch from GitHub API data.

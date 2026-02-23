@@ -192,6 +192,7 @@ class Form(BaseComponent):
     @customizable
     def repository_tabs(self, tc):
         self.branchesTab(tc.contentPane(title='!![en]Branches'))
+        self.commitsTab(tc.contentPane(title='!![en]Commits'))
         self.issuesTab(tc.contentPane(title='!![en]Issues'))
         self.pullRequestsTab(tc.contentPane(title='!![en]Pull Requests'))
         self.topicsTab(tc.contentPane(title='!![en]Topics'))
@@ -214,6 +215,12 @@ class Form(BaseComponent):
                     repository_id='=#FORM.record.id',
                     _lockScreen=True,
                     _onResult='this.form.reload();')
+
+    def commitsTab(self, pane):
+        pane.dialogTableHandler(relation='@commits',
+                                viewResource='ViewFromRepository',
+                                addrow=False, delrow=False,
+                                margin='2px', border='1px solid silver', rounded=4)
 
     def issuesTab(self, pane):
         th = pane.dialogTableHandler(relation='@issues',

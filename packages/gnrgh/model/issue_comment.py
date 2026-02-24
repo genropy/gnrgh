@@ -25,7 +25,7 @@ class Table(object):
             mode='foreignkey', onDelete='setnull')
 
         # Comment fields
-        tbl.column('body', name_long='!![en]Body')
+        tbl.column('body', name_long='!![en]Body', ext_ltx='*', ltx_documentRegister=dict(preprocess=False, document_type='issue_comment'))
         tbl.column('html_url', name_long='!![en]URL')
 
         # Timestamps from GitHub

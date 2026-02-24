@@ -30,6 +30,7 @@ class Main(BaseResourceAction):
         label_tbl = self.db.table('gnrgh.gh_repo_label')
         commit_tbl = self.db.table('gnrgh.commit')
         connection_tbl = self.db.table('gnrgh.gh_user_connection')
+        comment_tbl = self.db.table('gnrgh.issue_comment')
 
         for row in self.btc.thermo_wrapper(rows, line_code='repos', message='!![en]Repositories'):
             full_name = row.get('full_name')
@@ -56,7 +57,13 @@ class Main(BaseResourceAction):
                     **kw)
                 if max_count and not since_date:
                     commits_data = list(commits_data)[:max_count]
-                commit_tbl.importCommits(commits_data, repository_id=repository_id)
+                n_imported = commit_tbl.importCommits(commits_data, repository_id=repository_id)
+                if since_date and n_imported < 5:
+                    fallback = github_service.getCommits(
+                        owner=owner, repo=repo_name,
+                        per_page=5, paginate=False)
+                    commit_tbl.importCommits(list(fallback)[:5],
+                        repository_id=repository_id)
 
                 # Link commits to main branches (master/main, develop/development)
                 key_branches = branch_tbl.query(
@@ -77,15 +84,28 @@ class Main(BaseResourceAction):
                         **kw_br)
                     if max_count and not since_date:
                         br_commits = list(br_commits)[:max_count]
-                    commit_tbl.importCommits(br_commits,
+                    n_br_imported = commit_tbl.importCommits(br_commits,
                         repository_id=repository_id,
                         branch_id=br['id'])
+                    if since_date and n_br_imported < 5:
+                        br_fallback = github_service.getCommits(
+                            owner=owner, repo=repo_name,
+                            sha=br['name'],
+                            per_page=5, paginate=False)
+                        commit_tbl.importCommits(list(br_fallback)[:5],
+                            repository_id=repository_id,
+                            branch_id=br['id'])
                     with branch_tbl.recordToUpdate(pkey=br['id']) as br_rec:
                         br_rec['last_sync_ts'] = datetime.now()
 
             issues = github_service.getIssues(owner=owner, repo=repo_name, state='all')
             for issue_data in self.btc.thermo_wrapper(issues, line_code='detail', message='!![en]Issues'):
-                issue_tbl.importIssue(issue_data, repository_id=repository_id)
+                issue_id = issue_tbl.importIssue(issue_data, repository_id=repository_id)
+                if issue_id and issue_data.get('comments', 0) > 0:
+                    comments = github_service.getIssueComments(
+                        owner=owner, repo=repo_name,
+                        issue_number=issue_data['number'])
+                    comment_tbl.importCommentsForIssue(comments, issue_id=issue_id)
 
             pull_requests = github_service.getPullRequests(owner=owner, repo=repo_name, state='all')
             for pr_data in self.btc.thermo_wrapper(pull_requests, line_code='detail', message='!![en]Pull Requests'):

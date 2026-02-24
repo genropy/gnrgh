@@ -28,7 +28,7 @@ class Table(object):
         tbl.column('number', dtype='L', indexed=True,
                    name_long='!![en]Number')
         tbl.column('title', name_long='!![en]Title')
-        tbl.column('body', name_long='!![en]Body')
+        tbl.column('body', name_long='!![en]Body', ext_ltx='*', ltx_documentRegister=dict(preprocess=False, document_type='issue'))
         tbl.column('state', size=':16', indexed=True,
                    name_long='!![en]State',values='open:Open,closed:Closed')  # open, closed
         tbl.column('state_reason', size=':32',

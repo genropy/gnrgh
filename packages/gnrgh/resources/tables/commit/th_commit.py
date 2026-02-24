@@ -14,13 +14,14 @@ class View(BaseComponent):
         r.fieldcell('author_name', width='10em')
         r.fieldcell('author_date', width='12em')
         r.fieldcell('message', width='30em')
+        r.fieldcell('message_snippet', width='30em', name='Snippet')
         r.fieldcell('files_changed', width='6em')
 
     def th_order(self):
         return 'author_date:d'
 
     def th_query(self):
-        return dict(column='message', op='contains', val='')
+        return dict(column='message_text', op='fulltext', val='')
 
     def th_queryBySample(self):
         return dict(fields=[

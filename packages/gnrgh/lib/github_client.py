@@ -285,6 +285,48 @@ class GithubClient(object):
 
         return issues
 
+    def getIssueComments(
+        self,
+        access_token=None,
+        owner=None,
+        repo=None,
+        issue_number=None,
+        per_page=100,
+        since=None,
+        **kwargs,
+    ):
+        """Get all comments for a specific issue.
+
+        Args:
+            owner: Repository owner
+            repo: Repository name
+            issue_number: Issue number
+            per_page: Results per page (max 100)
+            since: Only comments updated after this timestamp (ISO 8601)
+        """
+        if not owner or not repo or not issue_number:
+            return []
+
+        params = {"per_page": per_page}
+        if since:
+            params["since"] = since
+
+        endpoint = f"/repos/{owner}/{repo}/issues/{issue_number}/comments"
+
+        r = self._auth_request(endpoint, access_token, params=params)
+
+        if not r.ok:
+            self._handle_error(r, 'getIssueComments')
+            return []
+
+        comments = r.json()
+        if self._extractPaginationLink(r.headers.get("Link"), rel="next"):
+            self._paginatedResults(
+                endpoint, access_token=access_token, params=params, result_list=comments
+            )
+
+        return comments
+
     def createIssue(
         self,
         access_token=None,

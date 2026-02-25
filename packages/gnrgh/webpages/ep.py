@@ -33,9 +33,9 @@ class GnrCustomWebPage(object):
         if not github_signature:
             raise GnrException('!![en]Missing X-Hub-Signature-256 header')
 
-        # Get the raw request body
-        # Try request.data first (should be the raw body)
-        raw_body = self.request.data
+        # Get the raw request body from Werkzeug cache
+        # (get_json in parse_request_params already called get_data(cache=True))
+        raw_body = self.request.get_data(cache=True)
 
         # Ensure raw_body is bytes
         if isinstance(raw_body, str):

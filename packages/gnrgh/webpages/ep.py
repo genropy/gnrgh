@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import base64
-import json
 import hmac
 import hashlib
 from gnr.core.gnrdecorator import public_method
-from gnr.core.gnrbag import Bag
 from gnr.core.gnrlang import GnrException
 from datetime import datetime
 
@@ -56,14 +53,8 @@ class GnrCustomWebPage(object):
             )
             raise GnrException('!![en]Invalid webhook signature')
 
-        # Parse the payload
-        try:
-            if isinstance(raw_body, bytes):
-                payload_data = json.loads(raw_body.decode('utf-8'))
-            else:
-                payload_data = json.loads(raw_body)
-        except (json.JSONDecodeError, UnicodeDecodeError) as e:
-            raise GnrException(f'!![en]Failed to parse webhook payload: {str(e)}')
+        # Parse the payload from kwargs (already parsed by GenroPy)
+        payload_data = kwargs
 
         # Extract action if present
         action = payload_data.get('action')

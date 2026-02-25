@@ -68,6 +68,47 @@ class Table(object):
             bc_tbl.linkBranchCommit(branch_id=branch_id, commit_id=commit_id)
         return commit_id
 
+    def importCommitFromPush(self, push_commit, repository_id=None, branch_id=None):
+        """Import a single commit from a push webhook payload.
+
+        The push payload format differs from the REST API format:
+        - Push: commit['id'] (sha), commit['author']['name'], commit['message']
+        - API:  commit['sha'], commit['commit']['author']['name']
+
+        Args:
+            push_commit: dict from push payload commits array
+            repository_id: pkey of the parent repository
+            branch_id: optional pkey of the branch
+
+        Returns:
+            The pkey of the created/updated commit record
+        """
+        sha = push_commit.get('id')
+        if not sha:
+            return None
+        author_info = push_commit.get('author', {})
+        with self.recordToUpdate(repository_id=repository_id, sha=sha,
+                                 insertMissing=True) as rec:
+            rec['repository_id'] = repository_id
+            rec['sha'] = sha
+            rec['author_name'] = author_info.get('name')
+            rec['author_email'] = author_info.get('email')
+            timestamp = push_commit.get('timestamp')
+            if timestamp:
+                rec['author_date'] = parse_date(timestamp)
+            rec['message'] = push_commit.get('message')
+            # Count files changed from added/removed/modified arrays
+            files_changed = (len(push_commit.get('added', []))
+                           + len(push_commit.get('removed', []))
+                           + len(push_commit.get('modified', [])))
+            if files_changed:
+                rec['files_changed'] = files_changed
+        commit_id = rec['id']
+        if branch_id:
+            bc_tbl = self.db.table('gnrgh.branch_commit')
+            bc_tbl.linkBranchCommit(branch_id=branch_id, commit_id=commit_id)
+        return commit_id
+
     def importCommits(self, commits_data, repository_id=None, branch_id=None):
         """Import commits for a repository.
 

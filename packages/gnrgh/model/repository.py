@@ -169,15 +169,25 @@ class Table(object):
         # Import/update the repository
         repository_id = self.importRepository(repo_data, organization_id=organization_id)
 
-        # On push events, update the branch commit_sha
+        # On push events, update the branch and import commits
         if payload.get('ref', '').startswith('refs/heads/'):
             branch_name = payload['ref'].replace('refs/heads/', '')
             commit_sha = payload.get('after')
             if repository_id and commit_sha:
-                self.db.table('gnrgh.branch').updateCommitSha(
+                branch_id = self.db.table('gnrgh.branch').updateCommitSha(
                     repository_id=repository_id,
                     branch_name=branch_name,
                     commit_sha=commit_sha
                 )
+                # Import commits from push payload
+                commits = payload.get('commits', [])
+                if commits:
+                    commit_tbl = self.db.table('gnrgh.commit')
+                    for push_commit in commits:
+                        commit_tbl.importCommitFromPush(
+                            push_commit,
+                            repository_id=repository_id,
+                            branch_id=branch_id
+                        )
 
         return repository_id

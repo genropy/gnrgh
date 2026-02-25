@@ -128,7 +128,7 @@ class Table(object):
                                          insertMissing=True) as branch_rec:
                     branch_rec['repository_id'] = repository_id
                     branch_rec['name'] = branch_name
-                    branch_rec['commit_sha'] = payload.get('master_branch')
+                    branch_rec['commit_sha'] = None  # will be set by the first push event
                 self.db.commit()
                 return branch_rec['id']
 
@@ -146,14 +146,15 @@ class Table(object):
         return None
 
     def updateCommitSha(self, repository_id=None, branch_name=None, commit_sha=None):
-        """Update the commit SHA for a branch after a push event."""
-        recs = self.query(
-            where='$repository_id=:repo_id AND $name=:bname',
-            repo_id=repository_id, bname=branch_name
-        ).fetch()
-        if recs:
-            with self.recordToUpdate(pkey=recs[0]['id']) as branch_rec:
-                branch_rec['commit_sha'] = commit_sha
-            self.db.commit()
-            return recs[0]['id']
-        return None
+        """Update the commit SHA for a branch after a push event.
+
+        Creates the branch if it doesn't exist yet (e.g. first push
+        on a new branch without a preceding 'create' event).
+        """
+        with self.recordToUpdate(repository_id=repository_id, name=branch_name,
+                                 insertMissing=True) as branch_rec:
+            branch_rec['repository_id'] = repository_id
+            branch_rec['name'] = branch_name
+            branch_rec['commit_sha'] = commit_sha
+        self.db.commit()
+        return branch_rec['id']

@@ -79,6 +79,7 @@ class Table(object):
             # Map event types to their corresponding tables
             event_table_map = {
                 'issues': 'gnrgh.issue',
+                'issue_comment': 'gnrgh.issue_comment',
                 'pull_request': 'gnrgh.pull_request',
                 'repository': 'gnrgh.repository',
                 'organization': 'gnrgh.organization',

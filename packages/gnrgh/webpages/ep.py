@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 
-import base64
 import json
 import hmac
 import hashlib
 from gnr.core.gnrdecorator import public_method
-from gnr.core.gnrbag import Bag
 from gnr.core.gnrlang import GnrException
 from datetime import datetime
 
 class GnrCustomWebPage(object):
     py_requires = 'gnrcomponents/externalcall:BaseRpc'
+    skip_connection = True
 
     @public_method
     def receiveWebhook(self, **kwargs):
@@ -33,13 +32,8 @@ class GnrCustomWebPage(object):
         if not github_signature:
             raise GnrException('!![en]Missing X-Hub-Signature-256 header')
 
-        # Get the raw request body for HMAC verification.
-        # Use get_data(cache=True) to ensure the body is available even if
-        # Werkzeug's form parser has already consumed the stream.
-        raw_body = self.request.get_data(cache=True)
-        if not raw_body:
-            # Fallback: reconstruct from kwargs (GenroPy may have parsed the JSON)
-            raw_body = json.dumps(kwargs).encode('utf-8') if kwargs else b''
+        # Get the raw request body
+        raw_body = self.request.data
 
         # Ensure raw_body is bytes
         if isinstance(raw_body, str):

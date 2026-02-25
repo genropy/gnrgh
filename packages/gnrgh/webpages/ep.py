@@ -33,9 +33,13 @@ class GnrCustomWebPage(object):
         if not github_signature:
             raise GnrException('!![en]Missing X-Hub-Signature-256 header')
 
-        # Get the raw request body
-        # Try request.data first (should be the raw body)
-        raw_body = self.request.data
+        # Get the raw request body for HMAC verification.
+        # Use get_data(cache=True) to ensure the body is available even if
+        # Werkzeug's form parser has already consumed the stream.
+        raw_body = self.request.get_data(cache=True)
+        if not raw_body:
+            # Fallback: reconstruct from kwargs (GenroPy may have parsed the JSON)
+            raw_body = json.dumps(kwargs).encode('utf-8') if kwargs else b''
 
         # Ensure raw_body is bytes
         if isinstance(raw_body, str):

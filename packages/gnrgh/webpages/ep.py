@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import json
 import hmac
 import hashlib
 from gnr.core.gnrdecorator import public_method
@@ -46,15 +47,15 @@ class GnrCustomWebPage(object):
         ).hexdigest()
 
         if not hmac.compare_digest(github_signature, expected_signature):
-            import logging
-            logging.getLogger('gnr.webhook').error(
-                'HMAC mismatch: body_len=%s body_preview=%r has_json_body=%s',
-                len(raw_body), raw_body[:100], '_json_body' in kwargs
-            )
             raise GnrException('!![en]Invalid webhook signature')
 
-        # Parse the payload from kwargs (already parsed by GenroPy)
-        payload_data = kwargs
+        try:
+            if isinstance(raw_body, bytes):
+                payload_data = json.loads(raw_body.decode('utf-8')) 
+            else:
+                payload_data = json.loads(raw_body)
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            raise GnrException(f'!![en]Failed to parse webhook payload: {str(e)}')           
 
         # Extract action if present
         action = payload_data.get('action')

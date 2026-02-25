@@ -5,7 +5,7 @@ from gnr.app.gnrdbo import GnrDboTable, GnrDboPackage
 class Package(GnrDboPackage):
     def config_attributes(self):
         return dict(comment='gnrgh package', sqlschema='gnrgh', sqlprefix=True,
-                    name_short='GitHub', name_long='GitHub', name_full='GitHub')
+                    name_short='gnrgh', name_long='!![en]GitHub Integration', name_full='!![en]GitHub Integration for GenroPy')
 
     def config_db(self, pkg):
         pass

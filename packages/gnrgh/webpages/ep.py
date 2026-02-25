@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 
+import base64
 import json
 import hmac
 import hashlib
 from gnr.core.gnrdecorator import public_method
+from gnr.core.gnrbag import Bag
 from gnr.core.gnrlang import GnrException
 from datetime import datetime
 
 class GnrCustomWebPage(object):
     py_requires = 'gnrcomponents/externalcall:BaseRpc'
-    skip_connection = True
 
     @public_method
     def receiveWebhook(self, **kwargs):
@@ -32,8 +33,9 @@ class GnrCustomWebPage(object):
         if not github_signature:
             raise GnrException('!![en]Missing X-Hub-Signature-256 header')
 
-        # Get the raw request body - try multiple sources
-        raw_body = self.request._request.get_data(cache=True)
+        # Get the raw request body
+        # Try request.data first (should be the raw body)
+        raw_body = self.request.data
 
         # Ensure raw_body is bytes
         if isinstance(raw_body, str):
@@ -47,11 +49,6 @@ class GnrCustomWebPage(object):
         ).hexdigest()
 
         if not hmac.compare_digest(github_signature, expected_signature):
-            import logging
-            logging.getLogger('gnr.webhook').error(
-                'HMAC mismatch: body_len=%s body_preview=%s',
-                len(raw_body), raw_body[:200]
-            )
             raise GnrException('!![en]Invalid webhook signature')
 
         # Parse the payload

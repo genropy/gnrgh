@@ -49,6 +49,11 @@ class GnrCustomWebPage(object):
         ).hexdigest()
 
         if not hmac.compare_digest(github_signature, expected_signature):
+            import logging
+            logging.getLogger('gnr.webhook').error(
+                'HMAC mismatch: body_len=%s body_preview=%r has_json_body=%s',
+                len(raw_body), raw_body[:100], '_json_body' in kwargs
+            )
             raise GnrException('!![en]Invalid webhook signature')
 
         # Parse the payload

@@ -92,7 +92,7 @@ class GnrCustomWebPage(object):
             action=action,
             repo_id=repo_id,
             organization_id=organization_id,
-            received_at=datetime.now(),
+            received_at=datetime.utcnow(),
             payload=payload_data
         )
         webhook_tbl.insert(record)

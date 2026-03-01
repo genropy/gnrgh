@@ -190,7 +190,7 @@ class Table(object):
             r['clone_path'] = repo_path
             r['local_head_sha'] = commit_sha
             r['local_branch'] = current_branch
-            r['last_pull_ts'] = datetime.now()
+            r['last_pull_ts'] = datetime.utcnow()
         return repo_path
 
     def pullRepository(self, pkey):
@@ -206,7 +206,7 @@ class Table(object):
 
         with self.recordToUpdate(pkey=pkey) as r:
             r['local_head_sha'] = commit_sha
-            r['last_pull_ts'] = datetime.now()
+            r['last_pull_ts'] = datetime.utcnow()
         return commit_sha
 
     def refreshCloneStatus(self, pkey):
@@ -268,7 +268,7 @@ class Table(object):
 
         with self.recordToUpdate(pkey=pkey) as r:
             r['local_head_sha'] = commit_sha
-            r['last_pull_ts'] = datetime.now()
+            r['last_pull_ts'] = datetime.utcnow()
 
     def processEvent(self, payload, action=None):
         """Process a webhook event for repositories.

@@ -41,7 +41,7 @@ class Main(BaseResourceAction):
                                      repository_id=row['repository_id'],
                                      branch_id=row['id'])
             with self.tblobj.recordToUpdate(pkey=row['id']) as rec:
-                rec['last_sync_ts'] = datetime.now()
+                rec['last_sync_ts'] = datetime.utcnow()
             self.db.commit()
 
     batch_dialog_width = '400px'

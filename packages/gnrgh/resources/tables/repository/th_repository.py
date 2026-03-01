@@ -443,7 +443,7 @@ class Form(BaseComponent):
         # Update last sync timestamp
         from datetime import datetime
         with repo_tbl.recordToUpdate(pkey=repository_id) as rec:
-            rec['last_sync_ts'] = datetime.now()
+            rec['last_sync_ts'] = datetime.utcnow()
 
         self.db.commit()
 

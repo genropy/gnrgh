@@ -96,7 +96,7 @@ class Main(BaseResourceAction):
                             repository_id=repository_id,
                             branch_id=br['id'])
                     with branch_tbl.recordToUpdate(pkey=br['id']) as br_rec:
-                        br_rec['last_sync_ts'] = datetime.now()
+                        br_rec['last_sync_ts'] = datetime.utcnow()
 
             issues = github_service.getIssues(owner=owner, repo=repo_name, state='all')
             for issue_data in self.btc.thermo_wrapper(issues, line_code='detail', message='!![en]Issues'):
@@ -120,7 +120,7 @@ class Main(BaseResourceAction):
             connection_tbl.syncMembersFromTopics(repository_id=repository_id)
 
             with self.tblobj.recordToUpdate(pkey=repository_id) as rec:
-                rec['last_sync_ts'] = datetime.now()
+                rec['last_sync_ts'] = datetime.utcnow()
 
             self.db.commit()
 
@@ -153,7 +153,7 @@ class Main(BaseResourceAction):
             months = int(match.group(1))
             if months == 0:
                 return (0, None)
-            since = datetime.now() - relativedelta(months=months)
+            since = datetime.utcnow() - relativedelta(months=months)
             return (None, since)
         try:
             n = int(policy_str)

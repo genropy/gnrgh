@@ -9,3 +9,6 @@ class AppPref(object):
         fb.textbox(value='^.webhook_secret', lbl='!![en]Webhook Secret')
         fb.textbox(value='^.commit_policy', lbl='!![en]Commit Policy (default)',
                    placeholder='5', tip='!![en]e.g. 5 = last 5 commits, 3m = last 3 months')
+        fb.textbox(value='^.clone_base_path', lbl='!![en]Clone Base Path',
+                   placeholder='~/.gnrgh/clones',
+                   tip='!![en]Local path for repository clones')

@@ -8,27 +8,27 @@ class View(BaseComponent):
 
     def th_struct(self, struct):
         r = struct.view().rows()
-        r.fieldcell('name', width='10em')
-        r.fieldcell('full_name', width='20em')
-        r.fieldcell('description', width='auto')
-        r.fieldcell('private', width='3em', name='!![en]Priv.', tick=True)
-        r.fieldcell('is_user_connected', width='3em', name='!![en]Mine', tick=True)
-        cs = r.columnset('status', name='!![en]Status')
-        cs.fieldcell('archived', width='5em', tick=True)
-        cs.fieldcell('closure_date', width='8em')
-
-        cs = r.columnset('counters', name='!![en]Counters', background='darkgreen')
-        cs.fieldcell('branch_count', width='5em', name='!![en]Branches')
+        r.fieldcell('full_name', width='18em')
+        r.fieldcell('repo_group', width='8em', name='!![en]Group')
+        cs = r.columnset('activity', name='!![en]Activity', background='#5b9bd5')
         cs.fieldcell('open_issues_count', width='5em', name='!![en]Issues')
         cs.fieldcell('open_pull_requests_count', width='5em', name='!![en]PRs')
-
-        cs = r.columnset('config', name='!![en]Config', background='darkorange')
-        cs.fieldcell('repo_group', width='10em')
-        cs.fieldcell('webhook_sync', width='3em', name='!![en]Sync', semaphore=True)
-
-        r.fieldcell('last_commit_ts', width='12em', name='!![en]Last Commit')
-        r.fieldcell('last_sync_ts', width='12em', name='!![en]Last Sync')
-        r.fieldcell('html_url', name='!![en]Url', width='2.5em',
+        cs = r.columnset('github', name='!![en]GitHub', background='darkorange')
+        cs.fieldcell('sync_status', width='3em', name=' ', semaphore=True)
+        cs.fieldcell('pushed_at', width='11em', name='!![en]Last Push',
+            _customGetter="""function(row){
+                var v=row.pushed_at; if(!v) return '';
+                var d=new Date(v);
+                if(isNaN(d)) return v;
+                var pad=function(n){return n<10?'0'+n:n;};
+                return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+' '+pad(d.getHours())+':'+pad(d.getMinutes());
+            }""")
+        cs.fieldcell('last_sync_ts', width='11em', name='!![en]Last Sync')
+        cs = r.columnset('clone', name='!![en]Clone', background='#5b9bd5')
+        cs.fieldcell('clone_status', width='3em', name=' ', semaphore=True)
+        cs.fieldcell('local_branch', width='8em', name='!![en]Branch')
+        cs.fieldcell('last_pull_ts', width='11em', name='!![en]Last Pull')
+        r.fieldcell('html_url', name=' ', width='2.5em',
                template='<a href="$html_url" target="_blank"><img src="/_rsrc/common/css_icons/svg/16/link_connected.svg" height="13px"/></a>')
 
     def th_groupedStruct(self, struct):
@@ -55,40 +55,55 @@ class View(BaseComponent):
             dict(field='repo_group', lbl='!![en]Group')
         ], cols=4, isDefault=True)
 
-    def th_top_bar(self, top):
-        top.slotToolbar('2,sections@sync_status,10,sections@repo_status,*,sections@userConnection',
+    def th_top_custom(self, top):
+        top.bar.replaceSlots('vtitle', '')
+
+    def th_top_clone(self, top):
+        top.slotToolbar('2,sections@organization_id,*,sections@dynrepogroup,2',
+                        childname='organizations', _position='<bar',
+                        sections_dynrepogroup_remote=self.sectionsDynRepoGroup)
+
+    def th_top_organization(self, top):
+        bar = top.slotToolbar('2,sections@sync_status,10,sections@clone_status,10,sections@repo_status,*,updListBtn,5,updContentBtn,2',
                        childname='repo_filter', _position='<bar')
+        bar.updListBtn.slotButton('!![en]Update Repo List',
+            action="""PUBLISH table_script_run = {res_type:"action",
+                resource:"import_repositories", table:"gnrgh.repository"};""")
+        bar.updContentBtn.slotButton('!![en]Update Repo Content',
+            action="""PUBLISH table_script_run = {res_type:"action",
+                resource:"deep_sync", table:"gnrgh.repository"};""")
 
     def th_sections_sync_status(self):
         return [
             dict(code='all', caption='!![en]All'),
-            dict(code='to_sync', caption='!![en]To Sync',
+            dict(code='not_synced', caption='!![en]Not Synced',
                  condition='$last_sync_ts IS NULL'),
-            dict(code='to_update', caption='!![en]To Update',
-                 condition='$last_sync_ts IS NOT NULL AND $has_pending_events IS TRUE'),
             dict(code='synced', caption='!![en]Synced',
-                 condition='$last_sync_ts IS NOT NULL AND ($has_pending_events IS NOT TRUE)')
+                 condition='$sync_status IS TRUE'),
+            dict(code='pending', caption='!![en]Pending',
+                 condition='$sync_status IS FALSE'),
         ]
 
-    def th_sections_userConnection(self):
+    def th_sections_clone_status(self):
         return [
             dict(code='all', caption='!![en]All'),
-            dict(code='mine', caption='!![en]Mine', condition='$is_user_connected IS TRUE'),
-            dict(code='attention', caption='!![en]Needs Attention', condition='$needs_attention IS TRUE')
+            dict(code='cloned', caption='!![en]Cloned',
+                 condition="$clone_path IS NOT NULL AND $clone_path != ''"),
+            dict(code='outdated', caption='!![en]Outdated',
+                 condition='$clone_status IS FALSE'),
+            dict(code='uptodate', caption='!![en]Up to date',
+                 condition='$clone_status IS TRUE'),
+            dict(code='not_cloned', caption='!![en]Not Cloned',
+                 condition="$clone_path IS NULL OR $clone_path = ''")
         ]
-
 
     def th_sections_repo_status(self):
         return [
+            dict(code='active', caption='!![en]Active',
+                 condition='$archived IS NOT TRUE AND $closure_date IS NULL'),
             dict(code='all', caption='!![en]All'),
-            dict(code='open', caption='!![en]Open', condition='$archived IS NOT TRUE AND $closure_date IS NULL'),
-            dict(code='closed', caption='!![en]Closed', condition='$closure_date IS NOT NULL AND $archived IS NOT TRUE'),
             dict(code='archived', caption='!![en]Archived', condition='$archived IS TRUE')
         ]
-
-    def th_top_org(self, top):
-        top.slotToolbar('2,sections@organization_id,*,sections@dynrepogroup,2',
-                        childname='organizations', _position='<bar',sections_dynrepogroup_remote=self.sectionsDynRepoGroup)
 
     @public_method(remote_organization_id='^gnrgh_repository.view.sections.organization_id.current')
     def sectionsDynRepoGroup(self, organization_id=None, **kwargs):
@@ -118,6 +133,7 @@ class ViewFromOrganization(BaseComponent):
         r.fieldcell('description', width='auto')
         r.fieldcell('default_branch', width='8em')
         r.fieldcell('private', width='3em', name='!![en]Priv.', tick=True)
+        r.fieldcell('clone_status', width='3em', name='!![en]Clone', semaphore=True)
         r.fieldcell('archived', width='5em', tick=True)
         cs = r.columnset('counters', name='!![en]Counters', background='#5b9bd5')
         cs.fieldcell('branch_count', width='5em', name='!![en]Branches')
@@ -191,6 +207,7 @@ class Form(BaseComponent):
 
     @customizable
     def repository_tabs(self, tc):
+        self.localCloneTab(tc.contentPane(title='!![en]Local Clone'))
         self.branchesTab(tc.contentPane(title='!![en]Branches'))
         self.commitsTab(tc.contentPane(title='!![en]Commits'))
         self.issuesTab(tc.contentPane(title='!![en]Issues'))
@@ -299,6 +316,59 @@ class Form(BaseComponent):
                     repository_id='=#FORM.record.id',
                     _lockScreen=True,
                     _onResult='this.form.reload();')
+
+    def localCloneTab(self, pane):
+        bc = pane.borderContainer()
+        top = bc.contentPane(region='top', height='120px', datapath='.record')
+        fb = top.formlet(cols=4, fld_readOnly=True, margin='3px',
+                         border='1px solid silver', rounded=4)
+        fb.field('clone_path', colspan=4)
+        fb.field('local_branch')
+        fb.field('local_head_sha', width='20em')
+        fb.field('last_pull_ts')
+        fb.field('clone_status', semaphore=True, lbl='!![en]Status')
+
+        bar = bc.contentPane(region='top', height='35px').slotToolbar(
+            '2,cloneBtn,5,pullBtn,5,switchBtn,5,diffBtn,*,commitMsg,5,commitBtn,2')
+        bar.cloneBtn.slotButton('!![en]Clone / Fetch',
+                                action="this.form.publish('cloneRepo')")
+        bar.pullBtn.slotButton('!![en]Pull',
+                               action="this.form.publish('pullRepo')")
+        bar.switchBtn.slotButton('!![en]Switch Branch',
+                                 action="this.form.publish('switchBranch')")
+        bar.diffBtn.slotButton('!![en]View Diff',
+                               action="this.form.publish('viewDiff')")
+        bar.commitMsg.textbox(value='^.commit_message', width='20em',
+                              placeholder='!![en]Commit message...')
+        bar.commitBtn.slotButton('!![en]Commit & Push',
+                                 action="this.form.publish('commitAndPush')")
+
+        center = bc.contentPane(region='center', margin='2px')
+        center.dataRpc('gnrgh_repository_clone.result', self.rpc_repo_clone,
+                       repository_id='=#FORM.record.id',
+                       _fired='^.cloneRepo',
+                       _lockScreen=True,
+                       _onResult='this.form.reload();')
+        center.dataRpc('gnrgh_repository_pull.result', self.rpc_repo_pull,
+                       repository_id='=#FORM.record.id',
+                       _fired='^.pullRepo',
+                       _lockScreen=True,
+                       _onResult='this.form.reload();')
+        center.dataRpc('gnrgh_repository_diff.result', self.rpc_repo_diff,
+                       repository_id='=#FORM.record.id',
+                       _fired='^.viewDiff',
+                       _lockScreen=True)
+        center.dataRpc('gnrgh_repository_commit.result', self.rpc_repo_commitAndPush,
+                       repository_id='=#FORM.record.id',
+                       message='=.commit_message',
+                       _fired='^.commitAndPush',
+                       _lockScreen=True,
+                       _onResult='this.form.reload();')
+        center.div('^gnrgh_repository_diff.result',
+                   white_space='pre', font_family='monospace',
+                   font_size='.85em', overflow='auto',
+                   padding='5px', border='1px solid silver',
+                   rounded=4, margin='2px', height='100%')
 
     def repositoryDetails(self, bc):
         fl = bc.contentPane(region='left', width='160px').formlet(
@@ -586,6 +656,40 @@ class Form(BaseComponent):
                     username=login,
                     permission=repo_level
                 )
+
+    @public_method
+    def rpc_repo_clone(self, repository_id=None):
+        """Clone or fetch a repository locally."""
+        repo_tbl = self.db.table('gnrgh.repository')
+        repo_tbl.cloneRepository(repository_id)
+        self.db.commit()
+
+    @public_method
+    def rpc_repo_pull(self, repository_id=None):
+        """Pull latest changes for a cloned repository."""
+        repo_tbl = self.db.table('gnrgh.repository')
+        repo_tbl.pullRepository(repository_id)
+        self.db.commit()
+
+    @public_method
+    def rpc_repo_switchBranch(self, repository_id=None, branch=None):
+        """Switch the local clone to a different branch."""
+        repo_tbl = self.db.table('gnrgh.repository')
+        repo_tbl.switchBranch(repository_id, branch)
+        self.db.commit()
+
+    @public_method
+    def rpc_repo_diff(self, repository_id=None):
+        """Get diff of local uncommitted changes."""
+        repo_tbl = self.db.table('gnrgh.repository')
+        return repo_tbl.getRepoDiff(repository_id)
+
+    @public_method
+    def rpc_repo_commitAndPush(self, repository_id=None, message=None):
+        """Commit local changes and push to remote."""
+        repo_tbl = self.db.table('gnrgh.repository')
+        repo_tbl.commitAndPush(repository_id, message)
+        self.db.commit()
 
     def th_options(self):
         return dict(dialog_parentRatio=.8)

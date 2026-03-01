@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # encoding: utf-8
+import os
 from gnr.app.gnrdbo import GnrDboTable, GnrDboPackage
 
 class Package(GnrDboPackage):
@@ -22,6 +23,22 @@ class Package(GnrDboPackage):
         from gnrpkg.gnrgh.github_client import GithubClient
         access_token = self.db.application.getPreference('access_token', pkg='gnrgh')
         return GithubClient(access_token=access_token or None)
+
+    def getGitLocal(self):
+        """Create and return a GitLocal instance for managing local clones.
+
+        Uses clone_base_path from package preferences if available,
+        otherwise defaults to ~/.gnrgh/clones.
+
+        Returns:
+            GitLocal instance
+        """
+        from gnrpkg.gnrgh.git_local import GitLocal
+        clone_base_path = self.db.application.getPreference('clone_base_path', pkg='gnrgh')
+        if not clone_base_path:
+            clone_base_path = os.path.join(os.path.expanduser('~'), '.gnrgh', 'clones')
+        os.makedirs(clone_base_path, exist_ok=True)
+        return GitLocal(clone_base_path=clone_base_path)
 
 class Table(GnrDboTable):
     pass

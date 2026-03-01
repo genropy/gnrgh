@@ -43,6 +43,7 @@ class Form(BaseComponent):
         btn.dataRpc(self.rpc_org_update,
                     organization_id='=#FORM.record.id',
                     _lockScreen=True,
+                    timeout=300000,
                     _onResult='this.form.reload();')
 
     def organizationHeader(self, pane):
@@ -112,7 +113,7 @@ class Form(BaseComponent):
 
     @public_method
     def rpc_org_update(self, organization_id=None):
-        """Update organization and all dependencies from GitHub."""
+        """Update organization info and repository list from GitHub."""
         tbl = self.db.table('gnrgh.organization')
         login = tbl.readColumns(pkey=organization_id, columns='$login')
         github_service = self.db.package('gnrgh').getGithubClient()
@@ -122,41 +123,11 @@ class Form(BaseComponent):
         if org_data:
             tbl.importOrganization(org_data, pkey=organization_id)
 
-        # Sync repositories
+        # Sync repositories (records only, no branches/commits)
         repos = github_service.getRepositories(organization=login)
         repo_tbl = self.db.table('gnrgh.repository')
         for repo in repos:
             repo_tbl.importRepository(repo, organization_id=organization_id)
-
-        # Sync branches for each repository
-        branch_tbl = self.db.table('gnrgh.branch')
-        repo_records = repo_tbl.query(
-            where='$organization_id=:org_id',
-            org_id=organization_id,
-            columns='$id,$full_name'
-        ).fetch()
-        for repo_rec in repo_records:
-            full_name = repo_rec['full_name']
-            if full_name and '/' in full_name:
-                owner, repo_name = full_name.split('/', 1)
-                branches_data = github_service.getBranches(owner=owner, repo=repo_name)
-                branch_tbl.importBranches(branches_data, repository_id=repo_rec['id'])
-
-        # Sync members
-        connection_tbl = self.db.table('gnrgh.gh_user_connection')
-        user_tbl = self.db.table('gnrgh.gh_user')
-        connection_tbl.syncMembers(
-            github_service=github_service,
-            user_tbl=user_tbl,
-            organization_id=organization_id,
-            login=login
-        )
-
-        # Sync artifacts
-        packages = github_service.getPackages(organization=login)
-        artifact_tbl = self.db.table('gnrgh.gh_artifact')
-        for pkg in packages:
-            artifact_tbl.importArtifact(pkg, organization_id=organization_id)
 
         self.db.commit()
 

@@ -5,8 +5,8 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from gnr.web.batch.btcaction import BaseResourceAction
 
-caption = 'Deep Sync Repositories'
-description = 'Sync branches, commits, issues, PRs, topics, labels and collaborators for selected repositories'
+caption = 'Update Repo Content'
+description = 'Pull local clone and sync branches, commits, issues, PRs, topics, labels from GitHub'
 
 class Main(BaseResourceAction):
     batch_prefix = 'DEEP_SYNC'

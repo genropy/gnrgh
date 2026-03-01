@@ -67,11 +67,9 @@ class View(BaseComponent):
         bar = top.slotToolbar('2,sections@sync_status,10,sections@clone_status,10,sections@repo_status,*,updListBtn,5,updContentBtn,2',
                        childname='repo_filter', _position='<bar')
         bar.updListBtn.slotButton('!![en]Update Repo List',
-            action="""PUBLISH table_script_run = {res_type:"action",
-                resource:"import_repositories", table:"gnrgh.repository"};""")
+            action='th_view_batch_caller({res_type:"action",resource:"import_repositories",table:"gnrgh.repository",gridId:"gnrgh_repository_grid"});')
         bar.updContentBtn.slotButton('!![en]Update Repo Content',
-            action="""PUBLISH table_script_run = {res_type:"action",
-                resource:"deep_sync", table:"gnrgh.repository"};""")
+            action='th_view_batch_caller({res_type:"action",resource:"deep_sync",table:"gnrgh.repository",gridId:"gnrgh_repository_grid"});')
 
     def th_sections_sync_status(self):
         return [

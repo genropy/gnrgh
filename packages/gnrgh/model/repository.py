@@ -134,12 +134,15 @@ class Table(object):
 
     def importRepository(self, remote_repo_data, pkey=None, organization_id=None):
         from dateutil.parser import parse as parse_date
+        from datetime import datetime
         github_id = remote_repo_data['id']
-        # Parse ISO date strings to datetime for proper Bag serialization
+        # Parse date strings/epochs to datetime for proper Bag serialization
         for k in ('pushed_at', 'created_at', 'updated_at'):
             v = remote_repo_data.get(k)
             if v and isinstance(v, str):
                 remote_repo_data[k] = parse_date(v)
+            elif v and isinstance(v, (int, float)):
+                remote_repo_data[k] = datetime.utcfromtimestamp(v)
         kw = dict(pkey=pkey) if pkey else dict(github_id=github_id, insertMissing=True)
         with self.recordToUpdate(**kw) as repo_rec:
             repo_rec['github_id'] = github_id

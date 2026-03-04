@@ -126,3 +126,13 @@ class Table(object):
                              branch_id=branch_id)
             imported_shas.add(commit_data['sha'])
         return len(imported_shas)
+
+    def ltx_caption(self, record):
+        repo_name = self.db.table('gnrgh.repository').readColumns(
+            columns='$full_name', pkey=record['repository_id'])
+        message = (record.get('message') or '').split('\n')[0][:80]
+        sha_short = (record.get('sha') or '')[:7]
+        return dict(
+            name='%s — %s: %s' % (repo_name or '?', sha_short, message),
+            gnrgh_repository_id=record['repository_id']
+        )

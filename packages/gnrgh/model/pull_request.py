@@ -205,3 +205,13 @@ class Table(object):
 
         # Import/update the pull request
         return self.importPullRequest(pr_data, repository_id=repository_id)
+
+    def ltx_caption(self, record):
+        repo_name = self.db.table('gnrgh.repository').readColumns(
+            columns='$full_name', pkey=record['repository_id'])
+        number = record.get('number') or '?'
+        title = (record.get('title') or '')[:80]
+        return dict(
+            name='%s — PR #%s: %s' % (repo_name or '?', number, title),
+            gnrgh_repository_id=record['repository_id']
+        )

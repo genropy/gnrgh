@@ -129,3 +129,16 @@ class Table(object):
 
         # Import/update the comment
         return self.importComment(comment_data, issue_id=issue_id)
+
+    def ltx_caption(self, record):
+        issue_tbl = self.db.table('gnrgh.issue')
+        issue_number, repository_id = issue_tbl.readColumns(
+            columns='$number,$repository_id',
+            pkey=record['issue_id'])
+        repo_name = self.db.table('gnrgh.repository').readColumns(
+            columns='$full_name', pkey=repository_id)
+        body_preview = (record.get('body') or '')[:80]
+        return dict(
+            name='%s — Issue #%s comment: %s' % (repo_name or '?', issue_number or '?', body_preview),
+            gnrgh_repository_id=repository_id
+        )

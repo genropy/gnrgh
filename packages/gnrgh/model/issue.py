@@ -179,7 +179,13 @@ class Table(object):
             columns='$full_name', pkey=record['repository_id'])
         number = record.get('number') or '?'
         title = (record.get('title') or '')[:80]
+        author_login = None
+        if record.get('author_id'):
+            author_login = self.db.table('gnrgh.gh_user').readColumns(
+                columns='$login', pkey=record['author_id'])
         return dict(
             name='%s — #%s: %s' % (repo_name or '?', number, title),
-            gnrgh_repository_id=record['repository_id']
+            gnrgh_repository_id=record['repository_id'],
+            document_date=record.get('github_created_at'),
+            author_name=author_login
         )

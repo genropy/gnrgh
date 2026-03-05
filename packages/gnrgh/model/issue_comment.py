@@ -138,7 +138,13 @@ class Table(object):
         repo_name = self.db.table('gnrgh.repository').readColumns(
             columns='$full_name', pkey=repository_id)
         body_preview = (record.get('body') or '')[:80]
+        author_login = None
+        if record.get('author_id'):
+            author_login = self.db.table('gnrgh.gh_user').readColumns(
+                columns='$login', pkey=record['author_id'])
         return dict(
             name='%s — Issue #%s comment: %s' % (repo_name or '?', issue_number or '?', body_preview),
-            gnrgh_repository_id=repository_id
+            gnrgh_repository_id=repository_id,
+            document_date=record.get('github_created_at'),
+            author_name=author_login
         )

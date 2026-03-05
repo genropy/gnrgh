@@ -134,5 +134,7 @@ class Table(object):
         sha_short = (record.get('sha') or '')[:7]
         return dict(
             name='%s — %s: %s' % (repo_name or '?', sha_short, message),
-            gnrgh_repository_id=record['repository_id']
+            gnrgh_repository_id=record['repository_id'],
+            document_date=record.get('author_date'),
+            author_name=record.get('author_name')
         )

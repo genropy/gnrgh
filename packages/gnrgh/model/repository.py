@@ -52,7 +52,7 @@ class Table(object):
         tbl.bagItemColumn('avatar_url', bagcolumn='$metadata', itempath='owner.avatar_url', name_long='!![en]Avatar URL')
         tbl.bagItemColumn('github_created_at', bagcolumn='$metadata', itempath='created_at', name_long='!![en]GitHub Created')
         tbl.bagItemColumn('github_updated_at', bagcolumn='$metadata', itempath='updated_at', name_long='!![en]GitHub Updated')
-        tbl.bagItemColumn('pushed_at', bagcolumn='$metadata', itempath='pushed_at', name_long='!![en]Last Push')
+        tbl.column('pushed_at', dtype='DH', name_long='!![en]Last Push')
 
         # Formula columns for counts
         tbl.formulaColumn('open_issues_count',
@@ -127,7 +127,7 @@ class Table(object):
             """CASE
                 WHEN $clone_path IS NULL OR $clone_path = '' THEN NULL
                 WHEN $last_pull_ts IS NULL THEN FALSE
-                WHEN ($pushed_at)::timestamp > $last_pull_ts THEN FALSE
+                WHEN $pushed_at > $last_pull_ts THEN FALSE
                 ELSE TRUE
             END""",
             dtype='B', name_long='!![en]Clone Status')
@@ -154,6 +154,7 @@ class Table(object):
             repo_rec['default_branch'] = remote_repo_data.get('default_branch')
             repo_rec['html_url'] = remote_repo_data.get('html_url')
             repo_rec['organization_id'] = repo_rec['organization_id'] or organization_id
+            repo_rec['pushed_at'] = remote_repo_data.get('pushed_at')
             repo_rec['metadata'] = Bag(remote_repo_data)
 
         repository_id = repo_rec['id']

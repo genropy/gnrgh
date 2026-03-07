@@ -214,6 +214,7 @@ class Form(BaseComponent):
         self.labelsTab(tc.contentPane(title='!![en]Labels'))
         self.artifactsTab(tc.contentPane(title='!![en]Artifacts'))
         self.collaboratorsTab(tc.contentPane(title='!![en]Collaborators'))
+        self.webhookEventsTab(tc.contentPane(title='!![en]Webhook Events'))
 
     def repository_config(self, bc):
         self.repositoryHeader(bc.contentPane(region='center'))
@@ -314,6 +315,12 @@ class Form(BaseComponent):
                     repository_id='=#FORM.record.id',
                     _lockScreen=True,
                     _onResult='this.form.reload();')
+
+    def webhookEventsTab(self, pane):
+        pane.dialogTableHandler(relation='@webhook_events',
+                                viewResource='ViewFromRepository',
+                                addrow=False, delrow=False,
+                                margin='2px', border='1px solid silver', rounded=4)
 
     def localCloneTab(self, pane):
         bc = pane.borderContainer()

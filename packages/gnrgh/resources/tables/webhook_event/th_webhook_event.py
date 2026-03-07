@@ -52,3 +52,17 @@ class ViewFromOrganization(BaseComponent):
 
     def th_order(self):
         return 'received_at:d'
+
+class ViewFromRepository(BaseComponent):
+
+    def th_struct(self, struct):
+        r = struct.view().rows()
+        r.fieldcell('received_at', width='12em')
+        r.fieldcell('event', width='10em')
+        r.fieldcell('action', width='8em')
+        r.fieldcell('issue', width='8em')
+        r.fieldcell('pull_request', width='8em')
+        r.fieldcell('delivery_id', width='15em')
+
+    def th_order(self):
+        return 'received_at:d'

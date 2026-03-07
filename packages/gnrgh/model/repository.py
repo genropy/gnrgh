@@ -1,4 +1,5 @@
 # encoding: utf-8
+# repository model
 from gnr.core.gnrdecorator import public_method
 from gnr.core.gnrbag import Bag
 

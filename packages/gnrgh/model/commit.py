@@ -22,10 +22,13 @@ class Table(object):
 
         tbl.index('repository_id,sha', unique=True)
 
-        # Formula columns
-        tbl.formulaColumn('repo_full_name',
-            '@repository_id.full_name',
-            name_long='!![en]Repository')
+        # Alias columns
+        tbl.aliasColumn('organization_name', '@repository_id.@organization_id.login',
+                        name_long='!![en]Organization')
+        tbl.aliasColumn('repo_full_name', '@repository_id.full_name',
+                        name_long='!![en]Repository')
+        tbl.aliasColumn('repo_group', '@repository_id.repo_group',
+                        name_long='!![en]Group')
 
         tbl.formulaColumn('branch_names',
             select=dict(table='gnrgh.branch_commit',

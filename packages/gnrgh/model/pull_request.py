@@ -67,6 +67,12 @@ class Table(object):
         # Raw payload from GitHub API
         tbl.column('metadata', dtype='X', name_long='!![en]Metadata')
 
+        # Alias columns
+        tbl.aliasColumn('organization_name', '@repository_id.@organization_id.login',
+                        name_long='!![en]Organization')
+        tbl.aliasColumn('repo_group', '@repository_id.repo_group',
+                        name_long='!![en]Group')
+
         # Composite column for unique constraint on repository + number
         tbl.compositeColumn('repo_number_id', columns='repository_id,number', unique=True)
 

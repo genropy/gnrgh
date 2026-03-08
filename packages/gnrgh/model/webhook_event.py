@@ -23,6 +23,10 @@ class Table(object):
         tbl.column('organization_id', size='22', name_long='!![en]Organization').relation(
             'organization.id', relation_name='webhook_events', mode='foreignkey', onDelete='setnull')
 
+        # Alias columns
+        tbl.aliasColumn('repo_group', '@repo_id.repo_group',
+                        name_long='!![en]Group')
+
         # Timestamps
         tbl.column('received_at', dtype='DHZ', indexed=True, name_long='!![en]Received At')
 

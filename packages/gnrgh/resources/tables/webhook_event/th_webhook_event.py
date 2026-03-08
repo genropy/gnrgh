@@ -15,7 +15,41 @@ class View(BaseComponent):
         r.fieldcell('organization_id')
 
     def th_order(self):
-        return 'received_at'
+        return 'received_at:d'
+
+    def th_sections_organization(self):
+        org_rows = self.db.table('gnrgh.organization').query(
+            columns='$id, $login',
+            order_by='$login'
+        ).fetch()
+        sections = [dict(code='all', caption='!![en]All')]
+        for org in org_rows:
+            sections.append(dict(
+                code=org['id'],
+                caption=org['login'],
+                condition='$organization_id=:org_id',
+                condition_org_id=org['id']
+            ))
+        return sections
+
+    def th_sections_repogroup(self):
+        groups = self.db.table('gnrgh.repo_group').query(
+            columns='$code,$name',
+            order_by='$name'
+        ).fetch()
+        sections = [dict(code='all', caption='!![en]All')]
+        for g in groups:
+            sections.append(dict(
+                code=g['code'],
+                caption=g['name'] or g['code'],
+                condition='$repo_group=:rg',
+                condition_rg=g['code']
+            ))
+        return sections
+
+    def th_top_partition_bar(self, top):
+        top.slotToolbar('2,sections@organization,5,sections@repogroup,2',
+                       childname='partition_bar', _position='<bar')
 
     def th_query(self):
         return dict(column='delivery_id', op='contains', val='')

@@ -23,6 +23,36 @@ class View(BaseComponent):
     def th_query(self):
         return dict(column='name', op='contains', val='')
 
+    def th_sections_organization(self):
+        org_rows = self.db.table('gnrgh.organization').query(
+            columns='$id, $login',
+            order_by='$login'
+        ).fetch()
+        sections = [dict(code='all', caption='!![en]All')]
+        for org in org_rows:
+            sections.append(dict(
+                code=org['id'],
+                caption=org['login'],
+                condition='$organization_name=:org_name',
+                condition_org_name=org['login']
+            ))
+        return sections
+
+    def th_sections_repogroup(self):
+        groups = self.db.table('gnrgh.repo_group').query(
+            columns='$code,$name',
+            order_by='$name'
+        ).fetch()
+        sections = [dict(code='all', caption='!![en]All')]
+        for g in groups:
+            sections.append(dict(
+                code=g['code'],
+                caption=g['name'] or g['code'],
+                condition='$repo_group=:rg',
+                condition_rg=g['code']
+            ))
+        return sections
+
     def th_sections_sync_status(self):
         return [
             dict(code='all', caption='!![en]All'),
@@ -32,9 +62,13 @@ class View(BaseComponent):
                  condition='$last_sync_ts IS NULL')
         ]
 
-    def th_top_bar(self, top):
+    def th_top_partition_bar(self, top):
+        top.slotToolbar('2,sections@organization,5,sections@repogroup,2',
+                       childname='partition_bar', _position='<bar')
+
+    def th_top_status_bar(self, top):
         top.slotToolbar('2,sections@sync_status,*',
-                       childname='sync_filter', _position='<bar')
+                       childname='status_bar', _position='<bar')
 
     def th_groupedStruct(self, struct):
         r = struct.view().rows()

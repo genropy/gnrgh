@@ -134,23 +134,30 @@ class GitHandler(object):
 
     # ── SYNC ─────────────────────────────────────────────────────
 
-    def check_repo(self, thermo_cb=None):
-        """Check all repositories: sync from GitHub API, update pushed_at, verify local clones.
+    def check_repo(self, organization_id=None, thermo_cb=None):
+        """Check repositories: sync from GitHub API, update pushed_at, verify local clones.
 
         For each repository also checks if a local clone exists and updates
         clone tracking fields (clone_path, local_head_sha, local_branch).
 
         Args:
+            organization_id: optional organization pkey to filter. If None, all orgs.
             thermo_cb: optional callback(items, line_code, message) for progress.
                        Must return an iterable wrapping items. If None, items
                        are iterated directly.
         """
         service = self.db.package('gnrgh').getGithubClient()
         org_tbl = self.db.table('gnrgh.organization')
-        orgs = org_tbl.query(
-            columns='$id,$login',
-            order_by='$login'
-        ).fetch()
+        if organization_id:
+            orgs = org_tbl.query(
+                where='$id=:oid', oid=organization_id,
+                columns='$id,$login'
+            ).fetch()
+        else:
+            orgs = org_tbl.query(
+                columns='$id,$login',
+                order_by='$login'
+            ).fetch()
 
         wrap = thermo_cb or (lambda items, **kw: items)
 

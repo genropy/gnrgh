@@ -14,7 +14,6 @@ class View(BaseComponent):
         r.fieldcell('author_name', width='10em')
         r.fieldcell('author_date', width='12em')
         r.fieldcell('message', width='30em')
-        r.fieldcell('message_snippet', width='30em', name='Snippet')
         r.fieldcell('files_changed', width='6em')
 
     def th_order(self):
@@ -41,14 +40,29 @@ class View(BaseComponent):
             sections.append(dict(
                 code=org['id'],
                 caption=org['login'],
-                condition='@repository_id.organization_id=:org_id',
-                condition_org_id=org['id']
+                condition='$organization_name=:org_name',
+                condition_org_name=org['login']
             ))
         return sections
 
-    def th_top_bar(self, top):
-        top.slotToolbar('2,sections@organization,*',
-                       childname='org_filter', _position='<bar')
+    def th_sections_repogroup(self):
+        groups = self.db.table('gnrgh.repo_group').query(
+            columns='$code,$name',
+            order_by='$name'
+        ).fetch()
+        sections = [dict(code='all', caption='!![en]All')]
+        for g in groups:
+            sections.append(dict(
+                code=g['code'],
+                caption=g['name'] or g['code'],
+                condition='$repo_group=:rg',
+                condition_rg=g['code']
+            ))
+        return sections
+
+    def th_top_partition_bar(self, top):
+        top.slotToolbar('2,sections@organization,5,sections@repogroup,2',
+                       childname='partition_bar', _position='<bar')
 
 
 class ViewFromRepository(BaseComponent):

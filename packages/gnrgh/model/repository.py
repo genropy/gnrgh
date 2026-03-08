@@ -210,9 +210,10 @@ class Table(object):
                                              author_name=author_name,
                                              author_email=author_email)
 
-    def checkRepo(self, thermo_cb=None):
-        """Check all repositories: sync from GitHub, update pushed_at, verify local clones."""
-        self.pkg.getGitHandler().check_repo(thermo_cb=thermo_cb)
+    def checkRepo(self, organization_id=None, thermo_cb=None):
+        """Check repositories: sync from GitHub, update pushed_at, verify local clones."""
+        self.pkg.getGitHandler().check_repo(organization_id=organization_id,
+                                            thermo_cb=thermo_cb)
 
     def syncRepo(self, pkeys, thermo_cb=None):
         """Sync branches, commits, issues, PRs, topics, labels from GitHub."""

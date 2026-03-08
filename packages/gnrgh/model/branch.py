@@ -26,6 +26,8 @@ class Table(object):
                         name_long='!![en]Repository Name')
         tbl.aliasColumn('repo_full_name', '@repository_id.full_name',
                         name_long='!![en]Repository')
+        tbl.aliasColumn('repo_group', '@repository_id.repo_group',
+                        name_long='!![en]Group')
 
         tbl.formulaColumn('last_commit_ts',
             select=dict(table='gnrgh.branch_commit',

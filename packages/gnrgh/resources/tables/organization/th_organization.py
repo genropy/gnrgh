@@ -113,7 +113,7 @@ class Form(BaseComponent):
 
     @public_method
     def rpc_org_update(self, organization_id=None):
-        """Update organization info and repository list from GitHub."""
+        """Update organization info and check its repositories from GitHub."""
         tbl = self.db.table('gnrgh.organization')
         login = tbl.readColumns(pkey=organization_id, columns='$login')
         github_service = self.db.package('gnrgh').getGithubClient()
@@ -122,14 +122,11 @@ class Form(BaseComponent):
         org_data = github_service.getOrganization(organization=login)
         if org_data:
             tbl.importOrganization(org_data, pkey=organization_id)
+            self.db.commit()
 
-        # Sync repositories (records only, no branches/commits)
-        repos = github_service.getRepositories(organization=login)
+        # Check repos (import + clone status + pushed_at)
         repo_tbl = self.db.table('gnrgh.repository')
-        for repo in repos:
-            repo_tbl.importRepository(repo, organization_id=organization_id)
-
-        self.db.commit()
+        repo_tbl.checkRepo(organization_id=organization_id)
 
     @public_method
     def rpc_org_syncMembers(self, organization_id=None):

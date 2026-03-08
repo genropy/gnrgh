@@ -176,36 +176,40 @@ class Table(object):
 
         return repository_id
 
-    def _getGitHandler(self):
-        from gnrpkg.gnrgh.lib.git_handler import GitHandler
-        return GitHandler(self.db)
-
     def cloneRepository(self, pkey):
         """Clone or fetch a repository locally and update tracking fields."""
-        return self._getGitHandler().clone(pkey)
+        return self.pkg.getGitHandler().clone(pkey)
 
     def pullRepository(self, pkey):
         """Pull latest changes for a cloned repository."""
-        return self._getGitHandler().pull(pkey)
+        return self.pkg.getGitHandler().pull(pkey)
 
     def refreshCloneStatus(self, pkey):
         """Check filesystem and update clone tracking fields."""
-        self._getGitHandler().refresh_clone_status(pkey)
+        self.pkg.getGitHandler().refresh_clone_status(pkey)
 
     def switchBranch(self, pkey, branch):
         """Switch the local clone to a different branch."""
-        self._getGitHandler().switch_branch(pkey, branch)
+        self.pkg.getGitHandler().switch_branch(pkey, branch)
 
     def getRepoDiff(self, pkey):
         """Get diff of local uncommitted changes."""
-        return self._getGitHandler().diff(pkey)
+        return self.pkg.getGitHandler().diff(pkey)
 
     def commitAndPush(self, pkey, message, author_name=None,
                       author_email=None):
         """Commit local changes and push to remote."""
-        self._getGitHandler().commit_and_push(pkey, message,
-                                              author_name=author_name,
-                                              author_email=author_email)
+        self.pkg.getGitHandler().commit_and_push(pkey, message,
+                                             author_name=author_name,
+                                             author_email=author_email)
+
+    def discoverRepositories(self, thermo_cb=None):
+        """Query GitHub API for each organization and create/update repository records."""
+        self.pkg.getGitHandler().discover_repositories(thermo_cb=thermo_cb)
+
+    def refreshPushStatus(self, thermo_cb=None):
+        """Fetch pushed_at from GitHub API for all repositories and update records."""
+        self.pkg.getGitHandler().refresh_push_status(thermo_cb=thermo_cb)
 
     def processEvent(self, payload, action=None):
         """Process a webhook event for repositories.

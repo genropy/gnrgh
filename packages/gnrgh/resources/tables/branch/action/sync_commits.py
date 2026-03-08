@@ -35,7 +35,7 @@ class Main(BaseResourceAction):
             commits_data = github_service.getCommits(
                 owner=owner, repo=repo_name,
                 sha=row['name'], per_page=100,
-                paginate=True, **kw
+                **kw
             )
             commit_tbl.importCommits(commits_data,
                                      repository_id=row['repository_id'],

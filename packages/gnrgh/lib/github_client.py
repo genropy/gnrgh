@@ -197,51 +197,16 @@ class GithubClient(object):
     ):
         "Get All Github repositories in an organization or user"
         params = {"per_page": per_page, **kwargs}
-
-        if organization:
-            endpoint = f"/orgs/{organization}/repos"
-        else:
-            endpoint = "/user/repos"
-
-        r = self._auth_request(endpoint, access_token, params=params)
-
-        if not r.ok:
-            self._handle_error(r, 'getRepositories')
-            return []
-
-        repositories = r.json()
-        if self._extractPaginationLink(r.headers.get("Link"), rel="next"):
-            self._paginatedResults(
-                endpoint,
-                access_token=access_token,
-                params=params,
-                result_list=repositories,
-            )
-
-        return repositories
+        endpoint = f"/orgs/{organization}/repos" if organization else "/user/repos"
+        return self._paginatedResults(endpoint, access_token, params=params)
 
     def getProjects(self, access_token=None, organization=None, per_page=100, **kwargs):
         "Get All Github projects in an organization"
-        params = {"per_page": per_page, **kwargs}
-
         if not organization:
             return []
-
+        params = {"per_page": per_page, **kwargs}
         endpoint = f"/orgs/{organization}/projects"
-
-        r = self._auth_request(endpoint, access_token, params=params)
-
-        if not r.ok:
-            self._handle_error(r, 'getProjects')
-            return []
-
-        projects = r.json()
-        if self._extractPaginationLink(r.headers.get("Link"), rel="next"):
-            self._paginatedResults(
-                endpoint, access_token=access_token, params=params, result_list=projects
-            )
-
-        return projects
+        return self._paginatedResults(endpoint, access_token, params=params)
 
     def getIssues(
         self,
@@ -259,31 +224,18 @@ class GithubClient(object):
         Assignee: can be '*' (anyone), 'none' (not assigned), username
         Since: timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ
         """
-        params = {
-            "per_page": per_page,
-            state: state,
-            assignee: assignee,
-            since: since,
-            **kwargs,
-        }
-
         if not owner or not repo:
             return []
+        params = {
+            "per_page": per_page,
+            "state": state,
+            "assignee": assignee,
+            **kwargs,
+        }
+        if since:
+            params["since"] = since
         endpoint = f"/repos/{owner}/{repo}/issues"
-
-        r = self._auth_request(endpoint, access_token, params=params)
-
-        if not r.ok:
-            self._handle_error(r, 'getIssues')
-            return []
-
-        issues = r.json()
-        if self._extractPaginationLink(r.headers.get("Link"), rel="next"):
-            self._paginatedResults(
-                endpoint, access_token=access_token, params=params, result_list=issues
-            )
-
-        return issues
+        return self._paginatedResults(endpoint, access_token, params=params)
 
     def getIssueComments(
         self,
@@ -306,26 +258,11 @@ class GithubClient(object):
         """
         if not owner or not repo or not issue_number:
             return []
-
         params = {"per_page": per_page}
         if since:
             params["since"] = since
-
         endpoint = f"/repos/{owner}/{repo}/issues/{issue_number}/comments"
-
-        r = self._auth_request(endpoint, access_token, params=params)
-
-        if not r.ok:
-            self._handle_error(r, 'getIssueComments')
-            return []
-
-        comments = r.json()
-        if self._extractPaginationLink(r.headers.get("Link"), rel="next"):
-            self._paginatedResults(
-                endpoint, access_token=access_token, params=params, result_list=comments
-            )
-
-        return comments
+        return self._paginatedResults(endpoint, access_token, params=params)
 
     def createIssue(
         self,
@@ -400,8 +337,10 @@ class GithubClient(object):
             direction: 'asc', 'desc'
 
         Returns:
-            List of pull request dicts from GitHub API
+            Generator of pull request dicts from GitHub API
         """
+        if not owner or not repo:
+            return []
         params = {
             "per_page": per_page,
             "state": state,
@@ -409,25 +348,8 @@ class GithubClient(object):
             "direction": direction,
             **kwargs,
         }
-
-        if not owner or not repo:
-            return []
-
         endpoint = f"/repos/{owner}/{repo}/pulls"
-
-        r = self._auth_request(endpoint, access_token, params=params)
-
-        if not r.ok:
-            self._handle_error(r, 'getPullRequests')
-            return []
-
-        pull_requests = r.json()
-        if self._extractPaginationLink(r.headers.get("Link"), rel="next"):
-            self._paginatedResults(
-                endpoint, access_token=access_token, params=params, result_list=pull_requests
-            )
-
-        return pull_requests
+        return self._paginatedResults(endpoint, access_token, params=params)
 
     def getOrgMembers(
         self,
@@ -444,32 +366,17 @@ class GithubClient(object):
             role: 'all', 'admin', 'member'
 
         Returns:
-            List of user dicts from GitHub API
+            Generator of user dicts from GitHub API
         """
+        if not organization:
+            return []
         params = {
             "per_page": per_page,
             "role": role,
             **kwargs,
         }
-
-        if not organization:
-            return []
-
         endpoint = f"/orgs/{organization}/members"
-
-        r = self._auth_request(endpoint, access_token, params=params)
-
-        if not r.ok:
-            self._handle_error(r, 'getOrgMembers')
-            return []
-
-        members = r.json()
-        if self._extractPaginationLink(r.headers.get("Link"), rel="next"):
-            self._paginatedResults(
-                endpoint, access_token=access_token, params=params, result_list=members
-            )
-
-        return members
+        return self._paginatedResults(endpoint, access_token, params=params)
 
     def getRepoCollaborators(
         self,
@@ -486,34 +393,16 @@ class GithubClient(object):
             repo: Repository name
 
         Returns:
-            List of user dicts from GitHub API
+            Generator of user dicts from GitHub API
 
         Raises:
             GithubAuthorizationError: If authentication fails
         """
-        params = {
-            "per_page": per_page,
-            **kwargs,
-        }
-
         if not owner or not repo:
             return []
-
+        params = {"per_page": per_page, **kwargs}
         endpoint = f"/repos/{owner}/{repo}/collaborators"
-
-        r = self._auth_request(endpoint, access_token, params=params)
-
-        if not r.ok:
-            self._handle_error(r, 'getRepoCollaborators')
-            return []
-
-        collaborators = r.json()
-        if self._extractPaginationLink(r.headers.get("Link"), rel="next"):
-            self._paginatedResults(
-                endpoint, access_token=access_token, params=params, result_list=collaborators
-            )
-
-        return collaborators
+        return self._paginatedResults(endpoint, access_token, params=params)
 
     def getPackages(
         self,
@@ -533,42 +422,30 @@ class GithubClient(object):
             visibility: 'public', 'private', 'internal' (optional filter)
 
         Returns:
-            List of package dicts from GitHub API
+            Generator of package dicts from GitHub API
         """
         if not organization:
             return []
 
-        # If no specific type, fetch all types
         package_types = [package_type] if package_type else [
             'npm', 'maven', 'rubygems', 'docker', 'nuget', 'container'
         ]
 
-        all_packages = []
-        for pkg_type in package_types:
-            params = {"per_page": per_page, "package_type": pkg_type}
-            if visibility:
-                params["visibility"] = visibility
-            params.update(kwargs)
+        def _iter_packages():
+            for pkg_type in package_types:
+                params = {"per_page": per_page, "package_type": pkg_type}
+                if visibility:
+                    params["visibility"] = visibility
+                params.update(kwargs)
+                endpoint = f"/orgs/{organization}/packages"
+                try:
+                    yield from self._paginatedResults(endpoint, access_token, params=params)
+                except GithubAuthorizationError:
+                    raise
+                except GithubNotFoundError:
+                    continue
 
-            endpoint = f"/orgs/{organization}/packages"
-
-            r = self._auth_request(endpoint, access_token, params=params)
-
-            if not r.ok:
-                # 404 means no packages of this type, not an error
-                # 401/403 are auth errors that should be raised
-                if r.status_code in (401, 403):
-                    self._handle_error(r, 'getPackages')
-                continue
-
-            packages = r.json()
-            if self._extractPaginationLink(r.headers.get("Link"), rel="next"):
-                self._paginatedResults(
-                    endpoint, access_token=access_token, params=params, result_list=packages
-                )
-            all_packages.extend(packages)
-
-        return all_packages
+        return _iter_packages()
 
     def getTags(
         self,
@@ -585,28 +462,13 @@ class GithubClient(object):
             repo: Repository name
 
         Returns:
-            List of tag dicts from GitHub API
+            Generator of tag dicts from GitHub API
         """
-        params = {"per_page": per_page, **kwargs}
-
         if not owner or not repo:
             return []
-
+        params = {"per_page": per_page, **kwargs}
         endpoint = f"/repos/{owner}/{repo}/tags"
-
-        r = self._auth_request(endpoint, access_token, params=params)
-
-        if not r.ok:
-            self._handle_error(r, 'getTags')
-            return []
-
-        tags = r.json()
-        if self._extractPaginationLink(r.headers.get("Link"), rel="next"):
-            self._paginatedResults(
-                endpoint, access_token=access_token, params=params, result_list=tags
-            )
-
-        return tags
+        return self._paginatedResults(endpoint, access_token, params=params)
 
     def getBranches(
         self,
@@ -623,28 +485,13 @@ class GithubClient(object):
             repo: Repository name
 
         Returns:
-            List of branch dicts from GitHub API
+            Generator of branch dicts from GitHub API
         """
-        params = {"per_page": per_page, **kwargs}
-
         if not owner or not repo:
             return []
-
+        params = {"per_page": per_page, **kwargs}
         endpoint = f"/repos/{owner}/{repo}/branches"
-
-        r = self._auth_request(endpoint, access_token, params=params)
-
-        if not r.ok:
-            self._handle_error(r, 'getBranches')
-            return []
-
-        branches = r.json()
-        if self._extractPaginationLink(r.headers.get("Link"), rel="next"):
-            self._paginatedResults(
-                endpoint, access_token=access_token, params=params, result_list=branches
-            )
-
-        return branches
+        return self._paginatedResults(endpoint, access_token, params=params)
 
     def getCommits(
         self,
@@ -654,7 +501,6 @@ class GithubClient(object):
         sha=None,
         per_page=100,
         since=None,
-        paginate=True,
         **kwargs,
     ):
         """Get commits for a repository branch.
@@ -665,35 +511,19 @@ class GithubClient(object):
             sha: Branch name or commit SHA to start from
             per_page: Number of results per page (max 100)
             since: ISO 8601 timestamp to filter commits after
-            paginate: If False, return only the first page of results
 
         Returns:
-            List of commit dicts from GitHub API
+            Generator of commit dicts from GitHub API
         """
+        if not owner or not repo:
+            return []
         params = {"per_page": per_page, **kwargs}
         if sha:
             params["sha"] = sha
         if since:
             params["since"] = since
-
-        if not owner or not repo:
-            return []
-
         endpoint = f"/repos/{owner}/{repo}/commits"
-
-        r = self._auth_request(endpoint, access_token, params=params)
-
-        if not r.ok:
-            self._handle_error(r, 'getCommits')
-            return []
-
-        commits = r.json()
-        if paginate and self._extractPaginationLink(r.headers.get("Link"), rel="next"):
-            self._paginatedResults(
-                endpoint, access_token=access_token, params=params, result_list=commits
-            )
-
-        return commits
+        return self._paginatedResults(endpoint, access_token, params=params)
 
     def getRepositoryTopics(
         self,
@@ -741,30 +571,13 @@ class GithubClient(object):
             per_page: Number of results per page (max 100)
 
         Returns:
-            List of label dicts with id, name, color, description
+            Generator of label dicts with id, name, color, description
         """
         if not owner or not repo:
             return []
-
+        params = {"per_page": per_page, **kwargs}
         endpoint = f"/repos/{owner}/{repo}/labels"
-        params = {"per_page": per_page}
-
-        r = self._auth_request(endpoint, access_token, params=params)
-
-        if not r.ok:
-            self._handle_error(r, 'getRepositoryLabels')
-            return []
-
-        labels = r.json()
-        if self._extractPaginationLink(r.headers.get("Link"), rel="next"):
-            self._paginatedResults(
-                endpoint,
-                access_token=access_token,
-                params=params,
-                result_list=labels,
-            )
-
-        return labels
+        return self._paginatedResults(endpoint, access_token, params=params)
 
     def setRepositoryTopics(
         self,
@@ -817,27 +630,13 @@ class GithubClient(object):
             package_name: Package name
 
         Returns:
-            List of version dicts from GitHub API
+            Generator of version dicts from GitHub API
         """
         if not organization or not package_type or not package_name:
             return []
-
         params = {"per_page": per_page, **kwargs}
         endpoint = f"/orgs/{organization}/packages/{package_type}/{package_name}/versions"
-
-        r = self._auth_request(endpoint, access_token, params=params)
-
-        if not r.ok:
-            self._handle_error(r, 'getPackageVersions')
-            return []
-
-        versions = r.json()
-        if self._extractPaginationLink(r.headers.get("Link"), rel="next"):
-            self._paginatedResults(
-                endpoint, access_token=access_token, params=params, result_list=versions
-            )
-
-        return versions
+        return self._paginatedResults(endpoint, access_token, params=params)
 
     def addCollaborator(
         self,
@@ -924,24 +723,21 @@ class GithubClient(object):
         result = json.loads(r.text)
         return result
 
-    def _paginatedResults(
-        self, initial_url, access_token=None, params=None, result_list=None
-    ):
-        """Handles paginated requests and appends results to the given list."""
-        params = params or {}
-        result_list = result_list or []
+    def _paginatedResults(self, endpoint, access_token=None, params=None):
+        """Generator that transparently handles GitHub API pagination.
 
-        endpoint = initial_url
+        Yields individual items from all pages. The caller gets a flat
+        stream of results regardless of how many pages are fetched.
+        """
+        params = params or {}
         while endpoint:
             r = self._auth_request(endpoint, access_token, params=params)
             if not r.ok:
                 self._handle_error(r, '_paginatedResults')
-                break
-
-            result_list.extend(r.json())
+                return
+            yield from r.json()
             endpoint = self._extractPaginationLink(r.headers.get("Link"), rel="next")
-
-        return result_list
+            params = {}  # "next" URLs already include query params
 
     def _extractPaginationLink(self, link_header, rel="next"):
         """Extracts a specific link (e.g., 'next', 'last') from the Link header."""

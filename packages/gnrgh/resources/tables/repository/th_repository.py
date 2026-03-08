@@ -58,18 +58,18 @@ class View(BaseComponent):
     def th_top_custom(self, top):
         top.bar.replaceSlots('vtitle', '')
 
-    def th_top_clone(self, top):
+    def th_top_sections(self, top):
         top.slotToolbar('2,sections@organization_id,*,sections@dynrepogroup,2',
                         childname='organizations', _position='<bar',
                         sections_dynrepogroup_remote=self.sectionsDynRepoGroup)
 
-    def th_top_organization(self, top):
+    def th_top_actions(self, top):
         bar = top.slotToolbar('2,sections@sync_status,10,sections@clone_status,10,sections@repo_status,*,checkClonesBtn,5,updListBtn,5,updContentBtn,2',
                        childname='repo_filter', _position='<bar')
         bar.checkClonesBtn.slotButton('!![en]Check Clones',
             action='th_view_batch_caller({res_type:"action",resource:"refresh_clone_status",table:"gnrgh.repository",gridId:"gnrgh_repository_grid"});')
-        bar.updListBtn.slotButton('!![en]Update Repo List',
-            action='th_view_batch_caller({res_type:"action",resource:"import_repositories",table:"gnrgh.repository",gridId:"gnrgh_repository_grid"});')
+        bar.updListBtn.slotButton('!![en]Discover Repos',
+            action='th_view_batch_caller({res_type:"action",resource:"discover_repositories",table:"gnrgh.repository",gridId:"gnrgh_repository_grid"});')
         bar.updContentBtn.slotButton('!![en]Update Repo Content',
             action='th_view_batch_caller({res_type:"action",resource:"deep_sync",table:"gnrgh.repository",gridId:"gnrgh_repository_grid"});')
 

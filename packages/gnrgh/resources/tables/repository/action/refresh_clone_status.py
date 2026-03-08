@@ -12,8 +12,7 @@ class Main(BaseResourceAction):
     batch_selection_savedQuery = False
 
     def do(self):
-        from gnrpkg.gnrgh.lib.git_handler import GitHandler
-        handler = GitHandler(self.db)
+        handler = self.tblobj.pkg.getGitHandler()
         pkeys = self.get_selection_pkeys()
         if not pkeys:
             return

@@ -8,13 +8,16 @@ from datetime import datetime, timezone
 class GitHandler(object):
     """Manages git operations on local repository clones.
 
-    Two logical groups of operations:
+    Three logical groups of operations:
 
     ACTIONS — modify the local clone state:
         clone, pull, switch_branch, commit_and_push, diff
 
     ALIGNMENT — sync DB state with filesystem reality:
-        refresh_clone_status, check_all_clones
+        refresh_clone_status, check_all_clones, discover_local_clones
+
+    SYNC — fetch data from GitHub API into DB:
+        discover_repositories, refresh_push_status
     """
 
     def __init__(self, db):
@@ -159,6 +162,73 @@ class GitHandler(object):
                 cleared += 1
 
         return dict(found=found, cleared=cleared, total=len(rows))
+
+    # ── SYNC ─────────────────────────────────────────────────────
+
+    def discover_repositories(self, thermo_cb=None):
+        """Query GitHub API for each organization and create/update repository records.
+
+        Args:
+            thermo_cb: optional callback(items, line_code, message) for progress.
+                       Must return an iterable wrapping items. If None, items
+                       are iterated directly.
+        """
+        service = self.db.package('gnrgh').getGithubClient()
+        org_tbl = self.db.table('gnrgh.organization')
+        orgs = org_tbl.query(
+            columns='$id,$login',
+            order_by='$login'
+        ).fetch()
+
+        wrap = thermo_cb or (lambda items, **kw: items)
+
+        for org_row in wrap(orgs, line_code='orgs',
+                            message=lambda item, *args, **kw: item['login']):
+            org_login = org_row['login']
+            organization_id = org_row['id']
+            repos = list(service.getRepositories(organization=org_login))
+            for repo_data in wrap(repos, line_code='repos',
+                                  message=lambda item, *args, **kw: item.get('name', '')):
+                self.repo_tbl.importRepository(repo_data, organization_id=organization_id)
+            self.db.commit()
+
+    def refresh_push_status(self, thermo_cb=None):
+        """Fetch pushed_at from GitHub API for all repositories and update records.
+
+        Args:
+            thermo_cb: optional callback(items, line_code, message) for progress.
+        """
+        from gnr.core.gnrbag import Bag
+        from dateutil.parser import parse as parse_date
+
+        service = self.db.package('gnrgh').getGithubClient()
+        orgs = self.db.query('gnrgh.organization',
+                             columns='$id,$login').fetch()
+
+        wrap = thermo_cb or (lambda items, **kw: items)
+
+        for org_row in wrap(orgs, line_code='orgs', message='!![en]Organizations'):
+            org_login = org_row['login']
+            repos = list(service.getRepositories(organization=org_login))
+            for repo_data in wrap(repos, line_code='repos', message='!![en]Repositories'):
+                github_id = repo_data.get('id')
+                if not github_id:
+                    continue
+                existing = self.repo_tbl.query(
+                    where='$github_id=:gid',
+                    gid=github_id,
+                    columns='$id'
+                ).fetch()
+                if not existing:
+                    continue
+                repo_id = existing[0]['id']
+                with self.repo_tbl.recordToUpdate(pkey=repo_id) as rec:
+                    pushed_at = repo_data.get('pushed_at')
+                    if pushed_at and isinstance(pushed_at, str):
+                        pushed_at = parse_date(pushed_at)
+                    rec['pushed_at'] = pushed_at
+                    rec['metadata'] = Bag(repo_data)
+            self.db.commit()
 
     def discover_local_clones(self):
         """Scan the clone directory and list clones not yet in DB.

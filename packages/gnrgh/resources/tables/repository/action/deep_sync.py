@@ -53,7 +53,6 @@ class Main(BaseResourceAction):
                 commits_data = github_service.getCommits(
                     owner=owner, repo=repo_name,
                     per_page=min(max_count or 100, 100),
-                    paginate=since_date is not None,
                     **kw)
                 if max_count and not since_date:
                     commits_data = list(commits_data)[:max_count]
@@ -61,7 +60,7 @@ class Main(BaseResourceAction):
                 if since_date and n_imported < 5:
                     fallback = github_service.getCommits(
                         owner=owner, repo=repo_name,
-                        per_page=5, paginate=False)
+                        per_page=5)
                     commit_tbl.importCommits(list(fallback)[:5],
                         repository_id=repository_id)
 
@@ -80,7 +79,6 @@ class Main(BaseResourceAction):
                         owner=owner, repo=repo_name,
                         sha=br['name'],
                         per_page=min(max_count or 100, 100),
-                        paginate=since_date is not None,
                         **kw_br)
                     if max_count and not since_date:
                         br_commits = list(br_commits)[:max_count]
@@ -91,7 +89,7 @@ class Main(BaseResourceAction):
                         br_fallback = github_service.getCommits(
                             owner=owner, repo=repo_name,
                             sha=br['name'],
-                            per_page=5, paginate=False)
+                            per_page=5)
                         commit_tbl.importCommits(list(br_fallback)[:5],
                             repository_id=repository_id,
                             branch_id=br['id'])

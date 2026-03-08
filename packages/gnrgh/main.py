@@ -40,5 +40,10 @@ class Package(GnrDboPackage):
         os.makedirs(clone_base_path, exist_ok=True)
         return GitLocal(clone_base_path=clone_base_path)
 
+    def getGitHandler(self):
+        """Create and return a GitHandler instance for git operations."""
+        from gnrpkg.gnrgh.git_handler import GitHandler
+        return GitHandler(db=self.db)
+
 class Table(GnrDboTable):
     pass

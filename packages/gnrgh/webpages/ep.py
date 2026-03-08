@@ -5,7 +5,7 @@ import hmac
 import hashlib
 from gnr.core.gnrdecorator import public_method
 from gnr.core.gnrlang import GnrException
-from datetime import datetime
+from datetime import datetime, timezone
 
 class GnrCustomWebPage(object):
     py_requires = 'gnrcomponents/externalcall:BaseRpc'
@@ -92,7 +92,7 @@ class GnrCustomWebPage(object):
             action=action,
             repo_id=repo_id,
             organization_id=organization_id,
-            received_at=datetime.utcnow(),
+            received_at=datetime.now(timezone.utc),
             payload=payload_data
         )
         webhook_tbl.insert(record)

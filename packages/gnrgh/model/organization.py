@@ -24,8 +24,8 @@ class Table(object):
         tbl.column('avatar_url', name_long='!![en]Avatar URL')
 
         # GitHub timestamps
-        tbl.column('github_created_at', dtype='DH', name_long='!![en]GitHub Created')
-        tbl.column('github_updated_at', dtype='DH', name_long='!![en]GitHub Updated')
+        tbl.column('github_created_at', dtype='DHZ', name_long='!![en]GitHub Created')
+        tbl.column('github_updated_at', dtype='DHZ', name_long='!![en]GitHub Updated')
 
         # Raw payload
         tbl.column('raw', dtype='X', name_long='!![en]Raw Payload')

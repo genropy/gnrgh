@@ -64,8 +64,10 @@ class View(BaseComponent):
                         sections_dynrepogroup_remote=self.sectionsDynRepoGroup)
 
     def th_top_organization(self, top):
-        bar = top.slotToolbar('2,sections@sync_status,10,sections@clone_status,10,sections@repo_status,*,updListBtn,5,updContentBtn,2',
+        bar = top.slotToolbar('2,sections@sync_status,10,sections@clone_status,10,sections@repo_status,*,checkClonesBtn,5,updListBtn,5,updContentBtn,2',
                        childname='repo_filter', _position='<bar')
+        bar.checkClonesBtn.slotButton('!![en]Check Clones',
+            action='th_view_batch_caller({res_type:"action",resource:"refresh_clone_status",table:"gnrgh.repository",gridId:"gnrgh_repository_grid"});')
         bar.updListBtn.slotButton('!![en]Update Repo List',
             action='th_view_batch_caller({res_type:"action",resource:"import_repositories",table:"gnrgh.repository",gridId:"gnrgh_repository_grid"});')
         bar.updContentBtn.slotButton('!![en]Update Repo Content',
@@ -446,9 +448,9 @@ class Form(BaseComponent):
         connection_tbl.syncMembersFromTopics(repository_id=repository_id)
 
         # Update last sync timestamp
-        from datetime import datetime
+        from datetime import datetime, timezone
         with repo_tbl.recordToUpdate(pkey=repository_id) as rec:
-            rec['last_sync_ts'] = datetime.utcnow()
+            rec['last_sync_ts'] = datetime.now(timezone.utc)
 
         self.db.commit()
 

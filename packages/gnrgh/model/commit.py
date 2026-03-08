@@ -16,7 +16,7 @@ class Table(object):
         tbl.column('sha', name_long='!![en]SHA', validate_notnull=True, indexed=True)
         tbl.column('author_name', name_long='!![en]Author Name')
         tbl.column('author_email', name_long='!![en]Author Email', indexed=True)
-        tbl.column('author_date', dtype='DH', name_long='!![en]Author Date', indexed=True)
+        tbl.column('author_date', dtype='DHZ', name_long='!![en]Author Date', indexed=True)
         tbl.column('message', dtype='T', name_long='!![en]Message', ext_ltx='*', ltx_documentRegister=dict(preprocess=False, document_type='commit_message'))
         tbl.column('files_changed', dtype='I', name_long='!![en]Files Changed')
 

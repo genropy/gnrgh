@@ -12,10 +12,12 @@ class Main(BaseResourceAction):
     batch_selection_savedQuery = False
 
     def do(self):
+        from gnrpkg.gnrgh.lib.git_handler import GitHandler
+        handler = GitHandler(self.db)
         pkeys = self.get_selection_pkeys()
         if not pkeys:
             return
-        repo_tbl = self.tblobj
-        for pkey in self.btc.thermo_wrapper(pkeys, line_code='repos', message='!![en]Repositories'):
-            repo_tbl.refreshCloneStatus(pkey)
+        for pkey in self.btc.thermo_wrapper(pkeys, line_code='repos',
+                                            message='!![en]Repositories'):
+            handler.refresh_clone_status(pkey)
             self.db.commit()

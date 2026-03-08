@@ -41,19 +41,19 @@ class Table(object):
         tbl.column('commit_policy', name_long='!![en]Commit Policy')
 
         # Sync tracking
-        tbl.column('last_sync_ts', dtype='DH', name_long='!![en]Last Sync')
+        tbl.column('last_sync_ts', dtype='DHZ', name_long='!![en]Last Sync')
 
         # Clone tracking
         tbl.column('clone_path', name_long='!![en]Clone Path')
         tbl.column('local_head_sha', name_long='!![en]Local HEAD SHA')
         tbl.column('local_branch', name_long='!![en]Local Branch')
-        tbl.column('last_pull_ts', dtype='DH', name_long='!![en]Last Pull')
+        tbl.column('last_pull_ts', dtype='DHZ', name_long='!![en]Last Pull')
 
         # Reference fields (extracted from metadata, purely informational)
         tbl.bagItemColumn('avatar_url', bagcolumn='$metadata', itempath='owner.avatar_url', name_long='!![en]Avatar URL')
         tbl.bagItemColumn('github_created_at', bagcolumn='$metadata', itempath='created_at', name_long='!![en]GitHub Created')
         tbl.bagItemColumn('github_updated_at', bagcolumn='$metadata', itempath='updated_at', name_long='!![en]GitHub Updated')
-        tbl.column('pushed_at', dtype='DH', name_long='!![en]Last Push')
+        tbl.column('pushed_at', dtype='DHZ', name_long='!![en]Last Push')
 
         # Formula columns for counts
         tbl.formulaColumn('open_issues_count',
@@ -122,7 +122,7 @@ class Table(object):
             select=dict(table='gnrgh.commit',
                         columns='MAX($author_date)',
                         where='$repository_id=#THIS.id'),
-            dtype='DH', name_long='!![en]Last Commit')
+            dtype='DHZ', name_long='!![en]Last Commit')
 
         tbl.formulaColumn('clone_status',
             """CASE
@@ -143,7 +143,8 @@ class Table(object):
             if v and isinstance(v, str):
                 remote_repo_data[k] = parse_date(v)
             elif v and isinstance(v, (int, float)):
-                remote_repo_data[k] = datetime.utcfromtimestamp(v)
+                from datetime import timezone
+                remote_repo_data[k] = datetime.fromtimestamp(v, tz=timezone.utc)
         kw = dict(pkey=pkey) if pkey else dict(github_id=github_id, insertMissing=True)
         with self.recordToUpdate(**kw) as repo_rec:
             repo_rec['github_id'] = github_id
@@ -175,105 +176,36 @@ class Table(object):
 
         return repository_id
 
-    def _getGitLocal(self):
-        return self.db.package('gnrgh').getGitLocal()
+    def _getGitHandler(self):
+        from gnrpkg.gnrgh.lib.git_handler import GitHandler
+        return GitHandler(self.db)
 
     def cloneRepository(self, pkey):
         """Clone or fetch a repository locally and update tracking fields."""
-        from datetime import datetime
-        git_local = self._getGitLocal()
-        rec = self.record(pkey).output('dict')
-        repo_name = rec['full_name']
-        html_url = rec['html_url']
-        branch = rec['default_branch'] or 'main'
-
-        repo_path = git_local.clone_or_fetch(html_url, repo_name, branch=branch)
-        commit_sha = git_local.get_current_commit(repo_name)
-        current_branch = git_local.current_branch(repo_name)
-
-        with self.recordToUpdate(pkey=pkey) as r:
-            r['clone_path'] = repo_path
-            r['local_head_sha'] = commit_sha
-            r['local_branch'] = current_branch
-            r['last_pull_ts'] = datetime.utcnow()
-        return repo_path
+        return self._getGitHandler().clone(pkey)
 
     def pullRepository(self, pkey):
         """Pull latest changes for a cloned repository."""
-        from datetime import datetime
-        git_local = self._getGitLocal()
-        rec = self.record(pkey).output('dict')
-        repo_name = rec['full_name']
-        branch = rec['local_branch'] or rec['default_branch'] or 'main'
-
-        git_local.pull(repo_name, branch)
-        commit_sha = git_local.get_current_commit(repo_name)
-
-        with self.recordToUpdate(pkey=pkey) as r:
-            r['local_head_sha'] = commit_sha
-            r['last_pull_ts'] = datetime.utcnow()
-        return commit_sha
+        return self._getGitHandler().pull(pkey)
 
     def refreshCloneStatus(self, pkey):
         """Check filesystem and update clone tracking fields."""
-        git_local = self._getGitLocal()
-        rec = self.record(pkey).output('dict')
-        repo_name = rec['full_name']
-
-        if not repo_name or not git_local.is_cloned(repo_name):
-            with self.recordToUpdate(pkey=pkey) as r:
-                r['clone_path'] = None
-                r['local_head_sha'] = None
-                r['local_branch'] = None
-                r['last_pull_ts'] = None
-            return
-
-        commit_sha = git_local.get_current_commit(repo_name)
-        current_branch = git_local.current_branch(repo_name)
-        repo_path = git_local.repo_path(repo_name)
-
-        with self.recordToUpdate(pkey=pkey) as r:
-            r['clone_path'] = repo_path
-            r['local_head_sha'] = commit_sha
-            r['local_branch'] = current_branch
+        self._getGitHandler().refresh_clone_status(pkey)
 
     def switchBranch(self, pkey, branch):
         """Switch the local clone to a different branch."""
-        git_local = self._getGitLocal()
-        rec = self.record(pkey).output('dict')
-        repo_name = rec['full_name']
-
-        git_local.switch_branch(repo_name, branch)
-        commit_sha = git_local.get_current_commit(repo_name)
-
-        with self.recordToUpdate(pkey=pkey) as r:
-            r['local_branch'] = branch
-            r['local_head_sha'] = commit_sha
+        self._getGitHandler().switch_branch(pkey, branch)
 
     def getRepoDiff(self, pkey):
         """Get diff of local uncommitted changes."""
-        git_local = self._getGitLocal()
-        rec = self.record(pkey).output('dict')
-        return git_local.diff(rec['full_name'])
+        return self._getGitHandler().diff(pkey)
 
     def commitAndPush(self, pkey, message, author_name=None,
                       author_email=None):
         """Commit local changes and push to remote."""
-        from datetime import datetime
-        git_local = self._getGitLocal()
-        rec = self.record(pkey).output('dict')
-        repo_name = rec['full_name']
-        branch = rec['local_branch'] or rec['default_branch'] or 'main'
-
-        git_local.commit(repo_name, message,
-                         author_name=author_name,
-                         author_email=author_email)
-        git_local.push(repo_name, branch)
-        commit_sha = git_local.get_current_commit(repo_name)
-
-        with self.recordToUpdate(pkey=pkey) as r:
-            r['local_head_sha'] = commit_sha
-            r['last_pull_ts'] = datetime.utcnow()
+        self._getGitHandler().commit_and_push(pkey, message,
+                                              author_name=author_name,
+                                              author_email=author_email)
 
     def processEvent(self, payload, action=None):
         """Process a webhook event for repositories.

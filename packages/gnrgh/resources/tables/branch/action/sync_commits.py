@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from datetime import datetime
+from datetime import datetime, timezone
 from gnr.web.batch.btcaction import BaseResourceAction
 
 caption = 'Sync Commits'
@@ -41,7 +41,7 @@ class Main(BaseResourceAction):
                                      repository_id=row['repository_id'],
                                      branch_id=row['id'])
             with self.tblobj.recordToUpdate(pkey=row['id']) as rec:
-                rec['last_sync_ts'] = datetime.utcnow()
+                rec['last_sync_ts'] = datetime.now(timezone.utc)
             self.db.commit()
 
     batch_dialog_width = '400px'

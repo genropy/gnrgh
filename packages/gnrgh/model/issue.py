@@ -36,11 +36,11 @@ class Table(object):
         tbl.column('html_url', name_long='!![en]URL')
 
         # Timestamps from GitHub
-        tbl.column('github_created_at', dtype='DH', indexed=True,
+        tbl.column('github_created_at', dtype='DHZ', indexed=True,
                    name_long='!![en]GitHub Created')
-        tbl.column('github_updated_at', dtype='DH', indexed=True,
+        tbl.column('github_updated_at', dtype='DHZ', indexed=True,
                    name_long='!![en]GitHub Updated')
-        tbl.column('github_closed_at', dtype='DH',
+        tbl.column('github_closed_at', dtype='DHZ',
                    name_long='!![en]GitHub Closed')
 
         # Raw payload from GitHub API

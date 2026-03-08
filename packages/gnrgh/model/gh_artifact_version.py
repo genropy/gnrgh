@@ -31,11 +31,11 @@ class Table(object):
         tbl.column('artifact_html_url', name_long='!![en]Artifact Web URL')
 
         # GitHub timestamps
-        tbl.column('github_created_at', dtype='DH', indexed=True,
+        tbl.column('github_created_at', dtype='DHZ', indexed=True,
                    name_long='!![en]GitHub Created')
-        tbl.column('github_updated_at', dtype='DH', indexed=True,
+        tbl.column('github_updated_at', dtype='DHZ', indexed=True,
                    name_long='!![en]GitHub Updated')
-        tbl.column('github_deleted_at', dtype='DH',
+        tbl.column('github_deleted_at', dtype='DHZ',
                    name_long='!![en]GitHub Deleted')
 
         # Raw payload from GitHub API

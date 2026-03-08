@@ -24,7 +24,7 @@ class Table(object):
             'organization.id', relation_name='webhook_events', mode='foreignkey', onDelete='setnull')
 
         # Timestamps
-        tbl.column('received_at', dtype='DH', indexed=True, name_long='!![en]Received At')
+        tbl.column('received_at', dtype='DHZ', indexed=True, name_long='!![en]Received At')
 
         # Raw payload
         tbl.column('payload', dtype='X', name_long='!![en]Payload')

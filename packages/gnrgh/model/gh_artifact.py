@@ -44,9 +44,9 @@ class Table(object):
         tbl.column('html_url', name_long='!![en]Web URL')
 
         # GitHub timestamps
-        tbl.column('github_created_at', dtype='DH', indexed=True,
+        tbl.column('github_created_at', dtype='DHZ', indexed=True,
                    name_long='!![en]GitHub Created')
-        tbl.column('github_updated_at', dtype='DH', indexed=True,
+        tbl.column('github_updated_at', dtype='DHZ', indexed=True,
                    name_long='!![en]GitHub Updated')
 
         # Raw payload from GitHub API

@@ -15,7 +15,7 @@ class Table(object):
 
         # Commit policy (overrides repository level)
         tbl.column('commit_policy', name_long='!![en]Commit Policy')
-        tbl.column('last_sync_ts', dtype='DH', name_long='!![en]Last Sync')
+        tbl.column('last_sync_ts', dtype='DHZ', name_long='!![en]Last Sync')
 
         tbl.compositeColumn('repo_branch', columns='repository_id,name', unique=True)
 
@@ -31,7 +31,7 @@ class Table(object):
             select=dict(table='gnrgh.branch_commit',
                         columns='MAX(@commit_id.author_date)',
                         where='$branch_id=#THIS.id'),
-            dtype='DH', name_long='!![en]Last Commit')
+            dtype='DHZ', name_long='!![en]Last Commit')
 
         tbl.formulaColumn('commit_count',
             select=dict(table='gnrgh.branch_commit',

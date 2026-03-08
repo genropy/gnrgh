@@ -107,7 +107,7 @@ class Table(object):
         tbl.formulaColumn('sync_status',
             """CASE
                 WHEN $last_sync_ts IS NULL THEN NULL
-                WHEN $has_pending_events THEN FALSE
+                WHEN $needs_sync THEN FALSE
                 ELSE TRUE
             END""",
             dtype='B', name_long='!![en]Sync Status')
@@ -132,6 +132,14 @@ class Table(object):
                 ELSE TRUE
             END""",
             dtype='B', name_long='!![en]Clone Status')
+
+        tbl.formulaColumn('needs_sync',
+            """CASE
+                WHEN $last_sync_ts IS NULL THEN TRUE
+                WHEN $pushed_at > $last_sync_ts THEN TRUE
+                ELSE FALSE
+            END""",
+            dtype='B', name_long='!![en]Needs Sync')
 
     def importRepository(self, remote_repo_data, pkey=None, organization_id=None):
         from dateutil.parser import parse as parse_date
@@ -203,13 +211,17 @@ class Table(object):
                                              author_name=author_name,
                                              author_email=author_email)
 
-    def discoverRepositories(self, thermo_cb=None):
-        """Query GitHub API for each organization and create/update repository records."""
-        self.pkg.getGitHandler().discover_repositories(thermo_cb=thermo_cb)
+    def checkRepo(self, thermo_cb=None):
+        """Check all repositories: sync from GitHub, update pushed_at, verify local clones."""
+        self.pkg.getGitHandler().check_repo(thermo_cb=thermo_cb)
 
-    def refreshPushStatus(self, thermo_cb=None):
-        """Fetch pushed_at from GitHub API for all repositories and update records."""
-        self.pkg.getGitHandler().refresh_push_status(thermo_cb=thermo_cb)
+    def syncRepo(self, pkeys, thermo_cb=None):
+        """Sync branches, commits, issues, PRs, topics, labels from GitHub."""
+        self.pkg.getGitHandler().sync_repo(pkeys=pkeys, thermo_cb=thermo_cb)
+
+    def updateClone(self, pkeys, thermo_cb=None):
+        """Clone or pull selected repositories."""
+        self.pkg.getGitHandler().update_clone(pkeys=pkeys, thermo_cb=thermo_cb)
 
     def processEvent(self, payload, action=None):
         """Process a webhook event for repositories.

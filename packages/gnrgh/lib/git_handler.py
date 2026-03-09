@@ -36,6 +36,17 @@ class GitHandler(object):
     def _read_repo(self, repository_id):
         return self.repo_tbl.record(repository_id).output('dict')
 
+    def _classify_repo(self, full_name, repo_path):
+        """Classify a repository into a repo_group based on name and content."""
+        if full_name == 'genropy/genropy':
+            return 'framework'
+        repo_name = full_name.split('/', 1)[-1]
+        if repo_name.startswith('genro-'):
+            return 'genro_ng'
+        if os.path.isdir(os.path.join(repo_path, 'packages')):
+            return 'genropy_app'
+        return 'other'
+
     # ── ACTIONS ─────────────────────────────────────────────────
 
     def clone(self, repository_id):
@@ -55,6 +66,8 @@ class GitHandler(object):
             r['local_head_sha'] = commit_sha
             r['local_branch'] = current_branch
             r['last_pull_ts'] = datetime.now(timezone.utc)
+            if not r.get('repo_group'):
+                r['repo_group'] = self._classify_repo(rec['full_name'], repo_path)
         return repo_path
 
     def pull(self, repository_id):

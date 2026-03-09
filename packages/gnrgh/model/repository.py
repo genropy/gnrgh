@@ -140,6 +140,10 @@ class Table(object):
             END""",
             dtype='B', name_long='!![en]Needs Sync')
 
+    def trigger_onUpdated(self, record, old_record):
+        if record['pushed_at'] != old_record.get('pushed_at'):
+            self.notify('pushed', pkey=record['id'])
+
     def importRepository(self, remote_repo_data, pkey=None, organization_id=None):
         from dateutil.parser import parse as parse_date
         from datetime import datetime

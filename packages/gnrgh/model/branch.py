@@ -1,5 +1,8 @@
 # encoding: utf-8
 
+from datetime import datetime, timezone
+
+
 class Table(object):
     def config_db(self, pkg):
         tbl = pkg.table('branch', pkey='id', name_long='!![en]Branch',
@@ -16,6 +19,7 @@ class Table(object):
         # Commit policy (overrides repository level)
         tbl.column('commit_policy', name_long='!![en]Commit Policy')
         tbl.column('last_sync_ts', dtype='DHZ', name_long='!![en]Last Sync')
+        tbl.column('pushed_at', dtype='DHZ', name_long='!![en]Last Push')
 
         tbl.compositeColumn('repo_branch', columns='repository_id,name', unique=True)
 
@@ -158,5 +162,6 @@ class Table(object):
             branch_rec['repository_id'] = repository_id
             branch_rec['name'] = branch_name
             branch_rec['commit_sha'] = commit_sha
+            branch_rec['pushed_at'] = datetime.now(timezone.utc)
         self.db.commit()
         return branch_rec['id']

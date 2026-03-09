@@ -13,6 +13,7 @@ class View(BaseComponent):
         r.fieldcell('name', width='15em')
         r.fieldcell('commit_sha', width='20em')
         r.fieldcell('commit_count', width='6em')
+        r.fieldcell('pushed_at', width='12em')
         r.fieldcell('protected', width='6em')
         r.fieldcell('is_default', width='6em')
         r.fieldcell('last_commit_ts', width='12em')

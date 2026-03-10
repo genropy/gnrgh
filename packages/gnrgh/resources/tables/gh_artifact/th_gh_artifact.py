@@ -25,7 +25,7 @@ class View(BaseComponent):
         return dict(column='name', op='contains', val='')
 
     def th_top_bar(self, top):
-        top.slotToolbar('2,sections@package_type,10,sections@organization_id,*',
+        top.slotToolbar('5,sections@package_type,10,sections@organization_id,*',
                         childname='filters', _position='<bar')
 
 

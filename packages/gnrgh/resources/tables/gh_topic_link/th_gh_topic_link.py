@@ -18,7 +18,7 @@ class View(BaseComponent):
         return dict(column='topic_name', op='contains', val='')
 
     def th_top_bar(self, top):
-        top.slotToolbar('2,sections@repository_id,*',
+        top.slotToolbar('5,sections@repository_id,*',
                         childname='filters', _position='<bar')
 
 

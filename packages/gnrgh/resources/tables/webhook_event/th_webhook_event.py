@@ -48,7 +48,7 @@ class View(BaseComponent):
         return sections
 
     def th_top_partition_bar(self, top):
-        top.slotToolbar('2,sections@organization,5,sections@repogroup,2',
+        top.slotToolbar('5,sections@organization,5,sections@repogroup,*',
                        childname='partition_bar', _position='<bar')
 
     def th_query(self):

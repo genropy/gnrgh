@@ -58,13 +58,26 @@ class View(BaseComponent):
     def th_top_custom(self, top):
         top.bar.replaceSlots('vtitle', '')
 
+    def th_sections_repogroup(self):
+        groups = self.db.table('gnrgh.repo_group').query(
+            columns='$code,$name', order_by='$name'
+        ).fetch()
+        sections = [dict(code='all', caption='!![en]All')]
+        for g in groups:
+            sections.append(dict(
+                code=g['code'],
+                caption=g['name'] or g['code'],
+                condition='$repo_group=:rg',
+                condition_rg=g['code']
+            ))
+        return sections
+
     def th_top_partition_bar(self, top):
-        top.slotToolbar('2,sections@organization_id,*,sections@dynrepogroup,2',
-                        childname='partition_bar', _position='<bar',
-                        sections_dynrepogroup_remote=self.sectionsDynRepoGroup)
+        top.slotToolbar('5,sections@organization_id,5,sections@repogroup,*',
+                        childname='partition_bar', _position='<bar')
 
     def th_top_status_command_bar(self, top):
-        bar = top.slotToolbar('2,sections@sync_status,10,sections@clone_status,sections@clone_update,10,sections@repo_status,*,checkRepoBtn,5,syncRepoBtn,5,updateCloneBtn,2',
+        bar = top.slotToolbar('5,sections@sync_status,10,sections@clone_status,sections@clone_update,10,sections@repo_status,*,checkRepoBtn,5,syncRepoBtn,5,updateCloneBtn,5',
                        childname='status_command_bar', _position='<bar')
         bar.checkRepoBtn.slotButton('!![en]Check Repo',
             action='FIRE .th_batch_run = {res_type:"action",resource:"check_repo"};')
@@ -111,23 +124,6 @@ class View(BaseComponent):
             dict(code='archived', caption='!![en]Archived', condition='$archived IS TRUE')
         ]
 
-    @public_method(remote_organization_id='^gnrgh_repository.view.sections.organization_id.current')
-    def sectionsDynRepoGroup(self, organization_id=None, **kwargs):
-        """Remote sections for repo_group, filtered by selected organization."""
-        result = [dict(code='all', caption='!![en]All')]
-        if not organization_id:
-            return result
-        groups = self.db.table('gnrgh.repo_group').query(
-            columns='$code,$name',
-            where='LOWER($organization_id)=:org_id OR $organization_id IS NULL',
-            org_id=organization_id.lower(),
-            order_by='$name'
-        ).fetch()
-        for i,g in enumerate(groups):
-            result.append(dict(code=f'r_{i}', caption=g['name'] or g['code'],
-                               condition='$repo_group=:repo_group',
-                               condition_repo_group=g['code']))
-        return result
 
 
 class ViewFromOrganization(BaseComponent):

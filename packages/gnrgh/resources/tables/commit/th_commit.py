@@ -20,7 +20,7 @@ class View(BaseComponent):
         return 'author_date:d'
 
     def th_query(self):
-        return dict(column='message_text', op='fulltext', val='')
+        return dict(column='message', op='contains', val='')
 
     def th_queryBySample(self):
         return dict(fields=[
@@ -61,7 +61,7 @@ class View(BaseComponent):
         return sections
 
     def th_top_partition_bar(self, top):
-        top.slotToolbar('2,sections@organization,5,sections@repogroup,2',
+        top.slotToolbar('5,sections@organization,5,sections@repogroup,*',
                        childname='partition_bar', _position='<bar')
 
 

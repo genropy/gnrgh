@@ -64,11 +64,11 @@ class View(BaseComponent):
         ]
 
     def th_top_partition_bar(self, top):
-        top.slotToolbar('2,sections@organization,5,sections@repogroup,2',
+        top.slotToolbar('5,sections@organization,5,sections@repogroup,*',
                        childname='partition_bar', _position='<bar')
 
     def th_top_status_bar(self, top):
-        top.slotToolbar('2,sections@sync_status,*',
+        top.slotToolbar('5,sections@sync_status,*',
                        childname='status_bar', _position='<bar')
 
     def th_groupedStruct(self, struct):

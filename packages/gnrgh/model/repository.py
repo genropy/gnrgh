@@ -32,6 +32,7 @@ class Table(object):
                    name_long='!![en]Webhook Sync')  # Flag for automatic sync via webhooks
         tbl.column('repo_group', size=':32', name_long='!![en]Repository Group', batch_assign=True).relation(
             'repo_group.code', relation_name='repositories', mode='foreignkey', onDelete='setnull')
+        tbl.column('inactive', dtype='B', indexed=True, name_long='!![en]Inactive', batch_assign=True)
         tbl.column('closure_date', dtype='D', name_long='!![en]Closure Date', batch_assign=True)
         tbl.column('closure_reason', name_long='!![en]Closure Reason', batch_assign=True)
         tbl.column('internal_notes', name_long='!![en]Internal Notes', batch_assign=True)

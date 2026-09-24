@@ -158,16 +158,24 @@ class Table(object):
                 from datetime import timezone
                 remote_repo_data[k] = datetime.fromtimestamp(v, tz=timezone.utc)
         forge_type = None
+        api_url = None
         if organization_id:
-            forge_type = self.db.table('gnrgh.organization').readColumns(
-                pkey=organization_id, columns='$forge_type')
+            forge_type, api_url = self.db.table('gnrgh.organization').readColumns(
+                pkey=organization_id, columns='$forge_type,$api_url')
         if forge_type == 'forgejo':
             # Forgejo has no pushed_at: updated_at changes on push
             remote_repo_data['pushed_at'] = remote_repo_data.get('updated_at')
+        if not pkey and organization_id:
+            # github_id is unique only within its forge (same api_url): a repo
+            # transferred between organizations of the same forge keeps its record
+            existing = self.query(
+                where="$github_id=:gid AND COALESCE(@organization_id.api_url,'')=:api_url",
+                gid=github_id, api_url=api_url or '', columns='$id').fetch()
+            if existing:
+                pkey = existing[0]['id']
         if pkey:
             kw = dict(pkey=pkey)
         elif organization_id:
-            # github_id is unique only within its forge
             kw = dict(github_id=github_id, organization_id=organization_id, insertMissing=True)
         else:
             kw = dict(github_id=github_id, insertMissing=True)
@@ -180,7 +188,8 @@ class Table(object):
             repo_rec['archived'] = remote_repo_data.get('archived', False)
             repo_rec['default_branch'] = remote_repo_data.get('default_branch')
             repo_rec['html_url'] = remote_repo_data.get('html_url')
-            repo_rec['organization_id'] = repo_rec['organization_id'] or organization_id
+            # follow transfers: the importing organization wins
+            repo_rec['organization_id'] = organization_id or repo_rec['organization_id']
             repo_rec['pushed_at'] = remote_repo_data.get('pushed_at')
             repo_rec['metadata'] = Bag(remote_repo_data)
 

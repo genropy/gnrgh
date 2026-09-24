@@ -11,16 +11,31 @@ class Package(GnrDboPackage):
     def config_db(self, pkg):
         pass
 
-    def getGithubClient(self):
+    def getGithubClient(self, organization_id=None):
         """Create and return a GithubClient instance.
 
-        Uses the access_token from package preferences if available,
-        otherwise falls back to local gh CLI token.
+        Without organization_id, or for an organization with no api_url, uses
+        the access_token from package preferences if available, otherwise
+        falls back to local gh CLI token.
+
+        For an organization with api_url (e.g. Forgejo), uses api_url and the
+        organization access_token. The package token is never sent to another
+        forge.
+
+        Args:
+            organization_id: optional gnrgh.organization pkey
 
         Returns:
             GithubClient instance
         """
         from gnrpkg.gnrgh.github_client import GithubClient
+        if organization_id:
+            org = self.db.table('gnrgh.organization').record(
+                pkey=organization_id).output('dict')
+            if org['api_url']:
+                if not org['access_token']:
+                    raise ValueError(f"Organization {org['login']} has api_url but no access_token")
+                return GithubClient(access_token=org['access_token'], api_url=org['api_url'])
         access_token = self.db.application.getPreference('access_token', pkg='gnrgh')
         return GithubClient(access_token=access_token or None)
 

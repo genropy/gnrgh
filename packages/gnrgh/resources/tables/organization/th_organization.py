@@ -58,6 +58,9 @@ class Form(BaseComponent):
         fb.field('html_url', colspan=2)
         fb.field('github_created_at', readonly=True)
         fb.field('github_updated_at', readonly=True)
+        fb.field('forge_type')
+        fb.field('api_url', colspan=2)
+        fb.field('access_token', type='password')
 
     def organizationRepositories(self, pane):
         th = pane.dialogTableHandler(relation='@repositories', batchAssign=True,
@@ -116,7 +119,7 @@ class Form(BaseComponent):
         """Update organization info and check its repositories from GitHub."""
         tbl = self.db.table('gnrgh.organization')
         login = tbl.readColumns(pkey=organization_id, columns='$login')
-        github_service = self.db.package('gnrgh').getGithubClient()
+        github_service = self.db.package('gnrgh').getGithubClient(organization_id=organization_id)
 
         # Update organization
         org_data = github_service.getOrganization(organization=login)
@@ -153,7 +156,7 @@ class Form(BaseComponent):
         org_tbl = self.db.table('gnrgh.organization')
         login = org_tbl.readColumns(pkey=organization_id, columns='$login')
 
-        github_service = self.db.package('gnrgh').getGithubClient()
+        github_service = self.db.package('gnrgh').getGithubClient(organization_id=organization_id)
         repos = github_service.getRepositories(organization=login)
 
         repo_tbl = self.db.table('gnrgh.repository')

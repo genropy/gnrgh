@@ -57,13 +57,16 @@ RAISING_ERROR_CODES = {
 
 
 class GithubClient(object):
-    def __init__(self, access_token=None):
+    def __init__(self, access_token=None, api_url=None):
         """Initialize the GitHub client.
 
         Args:
             access_token: GitHub personal access token. If not provided,
                           will attempt to get token from local gh CLI tool.
+            api_url: base URL of the API. Defaults to GitHub; a Forgejo
+                     instance uses e.g. https://hub.genro.com/api/v1
         """
+        self.api_url = api_url or API_URL
         self.access_token = access_token
         if not self.access_token:
             self.access_token = self.get_local_gh_token()
@@ -93,7 +96,7 @@ class GithubClient(object):
             "Accept": "application/json",
         }
         headers.update(kw.pop("headers", {}))
-        url = resource if resource.startswith("http") else f"{API_URL}{resource}"
+        url = resource if resource.startswith("http") else f"{self.api_url}{resource}"
         r = getattr(requests, method)(url, headers=headers, **kw)
         return r
 

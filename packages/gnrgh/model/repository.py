@@ -157,7 +157,20 @@ class Table(object):
             elif v and isinstance(v, (int, float)):
                 from datetime import timezone
                 remote_repo_data[k] = datetime.fromtimestamp(v, tz=timezone.utc)
-        kw = dict(pkey=pkey) if pkey else dict(github_id=github_id, insertMissing=True)
+        forge_type = None
+        if organization_id:
+            forge_type = self.db.table('gnrgh.organization').readColumns(
+                pkey=organization_id, columns='$forge_type')
+        if forge_type == 'forgejo':
+            # Forgejo has no pushed_at: updated_at changes on push
+            remote_repo_data['pushed_at'] = remote_repo_data.get('updated_at')
+        if pkey:
+            kw = dict(pkey=pkey)
+        elif organization_id:
+            # github_id is unique only within its forge
+            kw = dict(github_id=github_id, organization_id=organization_id, insertMissing=True)
+        else:
+            kw = dict(github_id=github_id, insertMissing=True)
         with self.recordToUpdate(**kw) as repo_rec:
             repo_rec['github_id'] = github_id
             repo_rec['name'] = remote_repo_data['name']
@@ -174,8 +187,9 @@ class Table(object):
         repository_id = repo_rec['id']
 
         # Import owner as gh_user and create connection
+        # (not for Forgejo: its user ids would collide with GitHub ones in gh_user)
         owner_data = remote_repo_data.get('owner')
-        if owner_data:
+        if owner_data and forge_type != 'forgejo':
             user_tbl = self.db.table('gnrgh.gh_user')
             connection_tbl = self.db.table('gnrgh.gh_user_connection')
             owner_user_id = user_tbl.importUser(owner_data)

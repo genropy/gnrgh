@@ -159,7 +159,7 @@ class GitHandler(object):
                        Must return an iterable wrapping items. If None, items
                        are iterated directly.
         """
-        service = self.db.package('gnrgh').getGithubClient()
+        pkg = self.db.package('gnrgh')
         org_tbl = self.db.table('gnrgh.organization')
         if organization_id:
             orgs = org_tbl.query(
@@ -178,6 +178,7 @@ class GitHandler(object):
                             message=lambda item, *args, **kw: item['login']):
             org_login = org_row['login']
             organization_id = org_row['id']
+            service = pkg.getGithubClient(organization_id=organization_id)
             repos = list(service.getRepositories(organization=org_login))
             for repo_data in wrap(repos, line_code='repos',
                                   message=lambda item, *args, **kw: item.get('name', '')):

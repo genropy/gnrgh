@@ -33,6 +33,9 @@ class Table(object):
         # Commit policy (overrides global preference)
         tbl.column('commit_policy', name_long='!![en]Commit Policy')
 
+        # Inactive: webhook events are stored but not processed, full sync skips it
+        tbl.column('inactive', dtype='B', indexed=True, name_long='!![en]Inactive')
+
         # Forge (empty api_url = GitHub with the package access_token preference)
         tbl.column('forge_type', size=':10', name_long='!![en]Forge Type',
                    values='github:GitHub,forgejo:Forgejo')

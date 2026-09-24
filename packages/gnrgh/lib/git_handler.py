@@ -168,6 +168,7 @@ class GitHandler(object):
             ).fetch()
         else:
             orgs = org_tbl.query(
+                where='$inactive IS NOT TRUE',
                 columns='$id,$login',
                 order_by='$login'
             ).fetch()

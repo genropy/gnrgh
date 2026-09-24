@@ -80,6 +80,12 @@ class Table(object):
             event_type = record['event']
             action = record['action']
 
+            # Events of an inactive organization are kept but not processed
+            organization_id = record['organization_id']
+            if organization_id and self.db.table('gnrgh.organization').readColumns(
+                    pkey=organization_id, columns='$inactive'):
+                return
+
             # Map event types to their corresponding tables
             event_table_map = {
                 'issues': 'gnrgh.issue',

@@ -17,6 +17,7 @@ class View(BaseComponent):
         r.fieldcell('github_created_at', width='10em')
         r.fieldcell('github_updated_at', width='10em')
         r.fieldcell('commit_policy', width='6em')
+        r.fieldcell('inactive', width='5em')
         r.fieldcell('html_url', width='15em')
 
     def th_order(self):
@@ -55,6 +56,7 @@ class Form(BaseComponent):
         fb.field('name')
         fb.field('github_id', readonly=True)
         fb.field('commit_policy')
+        fb.field('inactive')
         fb.field('html_url', colspan=2)
         fb.field('github_created_at', readonly=True)
         fb.field('github_updated_at', readonly=True)

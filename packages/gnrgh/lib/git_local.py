@@ -43,12 +43,16 @@ class GitLocal(object):
             check=check, capture_output=True, text=text)
 
     def _to_ssh_url(self, url):
-        """Convert HTTPS GitHub URL to SSH URL."""
-        if url.startswith('https://github.com/'):
-            path = url.replace('https://github.com/', '')
+        """Convert an HTTPS forge URL (GitHub, Forgejo) to SSH URL.
+
+        https://github.com/org/repo -> git@github.com:org/repo.git
+        https://hub.genro.com/org/repo -> git@hub.genro.com:org/repo.git
+        """
+        if url.startswith('https://'):
+            host, _, path = url[len('https://'):].partition('/')
             if not path.endswith('.git'):
                 path = path + '.git'
-            return 'git@github.com:%s' % path
+            return 'git@%s:%s' % (host, path)
         return url
 
     # --- Clone / Fetch / Pull ---

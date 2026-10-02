@@ -119,6 +119,12 @@ class Table(object):
             The pkey of the imported/updated record
         """
         github_id = pr_data['id']
+        if not pkey and repository_id:
+            # migrated repository: same number, new id (see issue.importIssue)
+            found = self.query(where='$github_id=:g', g=github_id, columns='$id').fetch() or \
+                self.query(where='$repository_id=:r AND $number=:n',
+                           r=repository_id, n=pr_data['number'], columns='$id').fetch()
+            pkey = found[0]['id'] if found else None
         kw = dict(pkey=pkey) if pkey else dict(github_id=github_id, insertMissing=True)
 
         # Import/update author
@@ -164,7 +170,7 @@ class Table(object):
         pr_pkey = rec['id']
 
         # Import assignees
-        self._importAssignees(pr_pkey, pr_data.get('assignees', []))
+        self._importAssignees(pr_pkey, pr_data.get('assignees') or [])
 
         return pr_pkey
 

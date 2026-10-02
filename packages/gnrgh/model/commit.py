@@ -101,9 +101,9 @@ class Table(object):
                 rec['author_date'] = parse_date(timestamp)
             rec['message'] = push_commit.get('message')
             # Count files changed from added/removed/modified arrays
-            files_changed = (len(push_commit.get('added', []))
-                           + len(push_commit.get('removed', []))
-                           + len(push_commit.get('modified', [])))
+            files_changed = (len(push_commit.get('added') or [])
+                           + len(push_commit.get('removed') or [])
+                           + len(push_commit.get('modified') or []))
             if files_changed:
                 rec['files_changed'] = files_changed
         commit_id = rec['id']

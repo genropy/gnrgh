@@ -60,32 +60,12 @@ class GnrCustomWebPage(object):
         # Extract action if present
         action = payload_data.get('action')
 
-        # Extract repository ID if present
-        repo_id = None
-        if 'repository' in payload_data:
-            repo_full_name = payload_data['repository'].get('full_name')
-            if repo_full_name:
-                # Try to find the repository in our database
-                repo_record = self.db.table('gnrgh.repository').query(
-                    where='$full_name=:fn', fn=repo_full_name
-                ).fetch()
-                if repo_record:
-                    repo_id = repo_record[0]['id']
-
-        # Extract organization ID if present
-        organization_id = None
-        if 'organization' in payload_data:
-            org_login = payload_data['organization'].get('login')
-            if org_login:
-                # Try to find the organization in our database
-                org_record = self.db.table('gnrgh.organization').query(
-                    where='$login=:login', login=org_login
-                ).fetch()
-                if org_record:
-                    organization_id = org_record[0]['id']
+        # Forgejo sends the GitHub headers too, plus its own X-Forgejo-*
+        is_forgejo = bool(self.request.get_header('X-Forgejo-Event'))
+        webhook_tbl = self.db.table('gnrgh.webhook_event')
+        repo_id, organization_id = webhook_tbl.resolveEventSource(payload_data, is_forgejo=is_forgejo)
 
         # Save the webhook event
-        webhook_tbl = self.db.table('gnrgh.webhook_event')
         record = webhook_tbl.newrecord(
             delivery_id=delivery_id,
             event=event_type,

@@ -93,6 +93,13 @@ class Table(object):
             return None
 
         github_id = issue_data['id']
+        if not pkey and repository_id:
+            # a repository migrated to another forge (GitHub -> Forgejo) keeps issue
+            # numbers but gets new ids: find the record by number, it takes the new id
+            found = self.query(where='$github_id=:g', g=github_id, columns='$id').fetch() or \
+                self.query(where='$repository_id=:r AND $number=:n',
+                           r=repository_id, n=issue_data['number'], columns='$id').fetch()
+            pkey = found[0]['id'] if found else None
         kw = dict(pkey=pkey) if pkey else dict(github_id=github_id, insertMissing=True)
 
         # Import/update author
@@ -119,7 +126,7 @@ class Table(object):
         issue_pkey = rec['id']
 
         # Import assignees
-        self._importAssignees(issue_pkey, issue_data.get('assignees', []))
+        self._importAssignees(issue_pkey, issue_data.get('assignees') or [])
 
         return issue_pkey
 

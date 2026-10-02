@@ -290,7 +290,7 @@ class Table(object):
                     commit_sha=commit_sha
                 )
                 # Import commits from push payload
-                commits = payload.get('commits', [])
+                commits = payload.get('commits') or []
                 if commits:
                     commit_tbl = self.db.table('gnrgh.commit')
                     for push_commit in commits:

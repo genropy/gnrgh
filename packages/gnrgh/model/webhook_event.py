@@ -109,7 +109,8 @@ class Table(object):
                 payload = payload_str
 
             event_type = record['event']
-            action = record['action']
+            # create/delete payloads have no action: branch.processEvent expects the event name
+            action = record['action'] or (event_type if event_type in ('create', 'delete') else None)
 
             # Events of an inactive organization are kept but not processed
             organization_id = record['organization_id']

@@ -57,25 +57,11 @@ class GnrCustomWebPage(object):
         except (json.JSONDecodeError, UnicodeDecodeError) as e:
             raise GnrException(f'!![en]Failed to parse webhook payload: {str(e)}')           
 
-        # Extract action if present
-        action = payload_data.get('action')
-
         # Forgejo sends the GitHub headers too, plus its own X-Forgejo-*
         is_forgejo = bool(self.request.get_header('X-Forgejo-Event'))
-        webhook_tbl = self.db.table('gnrgh.webhook_event')
-        repo_id, organization_id = webhook_tbl.resolveEventSource(payload_data, is_forgejo=is_forgejo)
-
-        # Save the webhook event
-        record = webhook_tbl.newrecord(
-            delivery_id=delivery_id,
-            event=event_type,
-            action=action,
-            repo_id=repo_id,
-            organization_id=organization_id,
-            received_at=datetime.now(timezone.utc),
-            payload=payload_data
-        )
-        webhook_tbl.insert(record)
+        stored = self.db.table('gnrgh.webhook_event').storeEvent(
+            payload_data, event=event_type, delivery_id=delivery_id,
+            received_at=datetime.now(timezone.utc), is_forgejo=is_forgejo)
         self.db.commit()
 
-        return {'success': True, 'delivery_id': delivery_id, 'event': event_type}
+        return {'success': True, 'delivery_id': delivery_id, 'event': event_type, 'ignored': not stored}

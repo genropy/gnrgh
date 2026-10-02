@@ -65,6 +65,25 @@ class Table(object):
         """Process webhook payload when a new event is inserted"""
         self.processWebhookPayload(record)
 
+    def storeEvent(self, payload, event=None, delivery_id=None, received_at=None, is_forgejo=False):
+        """Save a received webhook event (processed by trigger_onInserted).
+
+        A Forgejo system webhook sends the events of every repository of the
+        instance: events of an organization unknown to gnrgh (personal
+        repositories, organizations not imported) are not stored.
+
+        Returns:
+            The pkey of the stored event, or None if ignored
+        """
+        repo_id, organization_id = self.resolveEventSource(payload, is_forgejo=is_forgejo)
+        if is_forgejo and not organization_id:
+            return None
+        record = self.newrecord(delivery_id=delivery_id, event=event, action=payload.get('action'),
+                                repo_id=repo_id, organization_id=organization_id,
+                                received_at=received_at, payload=payload)
+        self.insert(record)
+        return record['id']
+
     def resolveEventSource(self, payload, is_forgejo=False):
         """Find repository and organization of a webhook payload within its forge.
 

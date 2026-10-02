@@ -1,10 +1,15 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
+import logging
 import os
 import re
 from datetime import datetime, timezone
 from dateutil.relativedelta import relativedelta
+
+from gnr.core.gnrbag import Bag
+
+logger = logging.getLogger(__name__)
 
 
 class GitHandler(object):
@@ -199,7 +204,7 @@ class GitHandler(object):
         rows = self.repo_tbl.query(
             where='$id IN :pkeys',
             pkeys=pkeys,
-            columns='$id,$full_name,$organization_id'
+            columns='$id,$full_name,$organization_id,$metadata'
         ).fetch()
         pkg = self.db.package('gnrgh')
         clients = {}  # one client per organization: GitHub or Forgejo
@@ -221,6 +226,11 @@ class GitHandler(object):
             if not full_name or '/' not in full_name:
                 continue
             owner, repo_name = full_name.split('/', 1)
+            # Forgejo marks repositories without commits as empty: their commit
+            # endpoints answer 409/404 and would stop the whole batch
+            if Bag(row['metadata'])['empty']:
+                logger.info('sync_repo: skipping empty repository %s', full_name)
+                continue
             organization_id = row['organization_id']
             if organization_id not in clients:
                 clients[organization_id] = pkg.getGithubClient(organization_id=organization_id)

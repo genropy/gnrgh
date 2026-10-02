@@ -556,7 +556,8 @@ class GithubClient(object):
             return []
 
         data = r.json()
-        return data.get('names', [])
+        # GitHub: {"names": [...]}; Forgejo: {"topics": [...]}
+        return data.get('names') or data.get('topics') or []
 
     def getRepositoryLabels(
         self,

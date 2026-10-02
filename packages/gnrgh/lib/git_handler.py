@@ -201,7 +201,8 @@ class GitHandler(object):
             pkeys=pkeys,
             columns='$id,$full_name,$organization_id'
         ).fetch()
-        service = self.db.package('gnrgh').getGithubClient()
+        pkg = self.db.package('gnrgh')
+        clients = {}  # one client per organization: GitHub or Forgejo
         branch_tbl = self.db.table('gnrgh.branch')
         issue_tbl = self.db.table('gnrgh.issue')
         pr_tbl = self.db.table('gnrgh.pull_request')
@@ -220,6 +221,10 @@ class GitHandler(object):
             if not full_name or '/' not in full_name:
                 continue
             owner, repo_name = full_name.split('/', 1)
+            organization_id = row['organization_id']
+            if organization_id not in clients:
+                clients[organization_id] = pkg.getGithubClient(organization_id=organization_id)
+            service = clients[organization_id]
 
             import_steps = [
                 dict(name='Branches'),

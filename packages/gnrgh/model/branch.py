@@ -61,7 +61,9 @@ class Table(object):
             branch_rec['repository_id'] = repository_id
             branch_rec['name'] = name
             commit_data = remote_branch_data.get('commit', {})
-            branch_rec['commit_sha'] = commit_data.get('sha') if isinstance(commit_data, dict) else None
+            # GitHub: commit.sha; Forgejo: commit.id
+            branch_rec['commit_sha'] = (commit_data.get('sha') or commit_data.get('id')) \
+                if isinstance(commit_data, dict) else None
             branch_rec['protected'] = remote_branch_data.get('protected', False)
         return branch_rec['id']
 

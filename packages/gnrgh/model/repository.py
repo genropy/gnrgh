@@ -1,5 +1,7 @@
 # encoding: utf-8
 # repository model
+import re
+
 from gnr.core.gnrbag import Bag
 
 class Table(object):
@@ -171,6 +173,15 @@ class Table(object):
             existing = self.query(
                 where="$github_id=:gid AND COALESCE(@organization_id.api_url,'')=:api_url",
                 gid=github_id, api_url=api_url or '', columns='$id').fetch()
+            if not existing and forge_type == 'forgejo':
+                # a repository migrated from GitHub (original_url) keeps its GitHub
+                # record, which moves to the hub organization with history and index
+                migrated = re.match(r'https?://github\.com/(.+?)(\.git)?/?$',
+                                    remote_repo_data.get('original_url') or '')
+                if migrated:
+                    existing = self.query(
+                        where='lower($full_name)=:fn AND @organization_id.api_url IS NULL',
+                        fn=migrated.group(1).lower(), columns='$id').fetch()
             if existing:
                 pkey = existing[0]['id']
         if pkey:

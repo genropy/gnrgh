@@ -11,6 +11,9 @@ script cannot decide (a gh_user referenced from two servers, organizations of
 one server with different tokens) are printed and left to a manual fix.
 """
 
+# webhook_event rows read per query in step 6
+EVENTS_BATCH = 500
+
 # path from each imported table to the git_host of its organization
 ORGANIZATION_HOST = {
     'repository': '@organization_id.git_host_id',
@@ -138,15 +141,21 @@ def main(db):
     event_tbl = db.table('gnrgh.webhook_event')
     issue_tbl = db.table('gnrgh.issue')
     pr_tbl = db.table('gnrgh.pull_request')
-    events = event_tbl.query(where='$git_host_id IS NULL',
-                             columns='$id,$payload,@organization_id.git_host_id AS org_host_id,'
-                                     '@repo_id.git_host_id AS repo_host_id',
-                             addPkeyColumn=False).fetch()
-    for event in events:
-        host_id = event['org_host_id'] or event['repo_host_id'] or github_host_id
-        payload = event['payload']
-        updater = dict(git_host_id=host_id)
-        if payload:
-            updater['issue_id'] = issue_tbl.pkeyFromExternal(host_id, payload['issue.id'])
-            updater['pull_request_id'] = pr_tbl.pkeyFromExternal(host_id, payload['pull_request.id'])
-        event_tbl.batchUpdate(updater, pkey=event['id'])
+    # payloads are read EVENTS_BATCH rows at a time: the table holds the raw
+    # payload of every event ever received, too much to parse in one fetch.
+    # Every batch sets git_host_id, so the next query returns the rows after it.
+    while True:
+        events = event_tbl.query(where='$git_host_id IS NULL',
+                                 columns='$id,$payload,@organization_id.git_host_id AS org_host_id,'
+                                         '@repo_id.git_host_id AS repo_host_id',
+                                 addPkeyColumn=False, order_by='$id', limit=EVENTS_BATCH).fetch()
+        if not events:
+            break
+        for event in events:
+            host_id = event['org_host_id'] or event['repo_host_id'] or github_host_id
+            payload = event['payload']
+            updater = dict(git_host_id=host_id)
+            if payload:
+                updater['issue_id'] = issue_tbl.pkeyFromExternal(host_id, payload['issue.id'])
+                updater['pull_request_id'] = pr_tbl.pkeyFromExternal(host_id, payload['pull_request.id'])
+            event_tbl.batchUpdate(updater, pkey=event['id'])

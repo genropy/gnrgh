@@ -1,12 +1,14 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+from gnr.core.gnrdecorator import oncalled
 from gnr.web.gnrbaseclasses import BaseComponent
 
 
 class Form(BaseComponent):
 
-    def adm_user_maintc_oncalled_gnrgh(self, tc, **kwargs):
+    @oncalled
+    def adm_user_maintc(self, tc, **kwargs):
         """Show the git accounts linked to the user, one per git_host.
 
         The link is set on the account (gnrgh.gh_user.adm_user_id): deleting a

@@ -12,15 +12,10 @@ class Package(GnrDboPackage):
         pass
 
     def getGithubClient(self, organization_id=None):
-        """Create and return a GithubClient instance.
+        """Create and return a GithubClient for the git_host of an organization.
 
-        Without organization_id, or for an organization with no api_url, uses
-        the access_token from package preferences if available, otherwise
-        falls back to local gh CLI token.
-
-        For an organization with api_url (e.g. Forgejo), uses api_url and the
-        organization access_token. The package token is never sent to another
-        forge.
+        Without organization_id the client talks to github.com
+        (git_host.githubHost).
 
         Args:
             organization_id: optional gnrgh.organization pkey
@@ -28,16 +23,13 @@ class Package(GnrDboPackage):
         Returns:
             GithubClient instance
         """
-        from gnrpkg.gnrgh.github_client import GithubClient
+        git_host_tbl = self.db.table('gnrgh.git_host')
         if organization_id:
-            org = self.db.table('gnrgh.organization').record(
-                pkey=organization_id).output('dict')
-            if org['api_url']:
-                if not org['access_token']:
-                    raise ValueError(f"Organization {org['login']} has api_url but no access_token")
-                return GithubClient(access_token=org['access_token'], api_url=org['api_url'])
-        access_token = self.db.application.getPreference('access_token', pkg='gnrgh')
-        return GithubClient(access_token=access_token or None)
+            git_host_id = self.db.table('gnrgh.organization').readColumns(
+                pkey=organization_id, columns='$git_host_id')
+        else:
+            git_host_id = git_host_tbl.githubHost()
+        return git_host_tbl.getClient(git_host_id)
 
     def getGitLocal(self):
         """Create and return a GitLocal instance for managing local clones.
@@ -61,4 +53,18 @@ class Package(GnrDboPackage):
         return GitHandler(db=self.db)
 
 class Table(GnrDboTable):
-    pass
+    def pkeyFromExternal(self, git_host_id, github_id):
+        """Resolve the id a git server gave to an object into the pkey of its row.
+
+        The server id (github_id) is unique only within its git_host: the pair
+        is the identity of an imported row at the border (import, sync,
+        webhook). Inside gnrgh only the pkey is used.
+
+        Returns:
+            The pkey, or None when the pair has no row
+        """
+        if not git_host_id or github_id is None:
+            return None
+        rows = self.query(where='$git_host_id=:h AND $github_id=:g',
+                          h=git_host_id, g=github_id, columns='$id').fetch()
+        return rows[0]['id'] if rows else None

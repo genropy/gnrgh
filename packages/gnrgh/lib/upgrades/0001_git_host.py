@@ -116,17 +116,29 @@ def main(db):
                    SELECT user_id FROM ({GH_USER_REFERENCES}) refs
                    WHERE user_id IS NOT NULL AND git_host_id IS NOT NULL
                    GROUP BY user_id HAVING COUNT(DISTINCT git_host_id) > 1""").fetchall()]
+    # an account referenced from two servers (the issues of a repository
+    # migrated to the hub keep their GitHub authors) belongs to the server of
+    # its profile page: html_url starts with the web url of its host
+    unresolved = []
+    for user_id in collided:
+        html_url = user_tbl.readColumns(pkey=user_id, columns='$html_url') or ''
+        hosts = [host_id for host_id in git_host_tbl.query(columns='$id').fetchAsDict('id')
+                 if html_url.startswith(git_host_tbl.webUrl(host_id) + '/')]
+        if len(hosts) == 1:
+            user_tbl.batchUpdate(dict(git_host_id=hosts[0]), pkey=user_id)
+        else:
+            unresolved.append(user_id)
     # accounts nobody references were imported from github.com, the only server
     # that created gh_user rows before git_host existed
     where = 'git_host_id IS NULL'
-    if collided:
-        where += ' AND id NOT IN :collided'
+    if unresolved:
+        where += ' AND id NOT IN :unresolved'
     db.execute(f'UPDATE gnrgh.gnrgh_gh_user SET git_host_id=:h WHERE {where}',
-               sqlargs=dict(h=github_host_id, collided=collided))
-    for user_id in collided:
+               sqlargs=dict(h=github_host_id, unresolved=unresolved))
+    for user_id in unresolved:
         login, github_id = user_tbl.readColumns(pkey=user_id, columns='$login,$github_id')
         print(f'\t   gh_user {user_id} ({login}, id {github_id}) is referenced from more than one '
-              f'server: git_host_id left empty, fix by hand')
+              f'server and its html_url matches none: git_host_id left empty, fix by hand')
 
     # 5. gh_user.adm_user_id from the old adm.user.gh_user_id
     if column_exists(db, 'adm', 'adm_user', 'gh_user_id'):

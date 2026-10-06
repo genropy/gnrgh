@@ -43,6 +43,19 @@ class Table(object):
             raise ValueError(f'git_host {description} ({url}) has no token')
         return GithubClient(access_token=token or None, api_url=url)
 
+    def hostFromWebUrl(self, url):
+        """Return the pkey of the host whose web url prefixes url, or None.
+
+        Used at the border for an event whose url names no host: the
+        repository.html_url of the payload tells the server.
+        """
+        if not url:
+            return None
+        for row in self.query(columns='$id').fetch():
+            if url.startswith(self.webUrl(row['id']) + '/'):
+                return row['id']
+        return None
+
     def webUrl(self, git_host_id):
         """Return the web base of the host: the API url without its /api/... suffix."""
         url = self.readColumns(pkey=git_host_id, columns='$url')

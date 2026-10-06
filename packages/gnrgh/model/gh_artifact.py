@@ -10,9 +10,11 @@ class Table(object):
                         caption_field='name')
         self.sysFields(tbl)
 
-        # GitHub unique identifier
-        tbl.column('github_id', dtype='L', unique=True, indexed=True,
-                   name_long='!![en]GitHub ID')
+        # Identity on its git server: github_id is unique within the git_host
+        tbl.column('git_host_id', size='22', group='_', name_long='!![en]Git Host').relation(
+            'git_host.id', relation_name='artifacts', mode='foreignkey', onDelete='raise')
+        tbl.column('github_id', dtype='L', indexed=True, name_long='!![en]GitHub ID')
+        tbl.compositeColumn('host_github_id', columns='git_host_id,github_id', unique=True)
 
         # Relations
         tbl.column('organization_id', size='22', group='_',
@@ -71,28 +73,25 @@ class Table(object):
             The pkey of the imported/updated record
         """
         github_id = artifact_data['id']
-        kw = dict(pkey=pkey) if pkey else dict(github_id=github_id, insertMissing=True)
+        if pkey:
+            organization_id = self.readColumns(pkey=pkey, columns='$organization_id')
+        git_host_id = self.db.table('gnrgh.organization').readColumns(
+            pkey=organization_id, columns='$git_host_id')
+        pkey = pkey or self.pkeyFromExternal(git_host_id, github_id)
+        kw = dict(pkey=pkey) if pkey else dict(git_host_id=git_host_id, github_id=github_id,
+                                               insertMissing=True)
 
         # Import owner as gh_user
         owner_id = None
         owner_data = artifact_data.get('owner')
         if owner_data:
-            owner_id = self.db.table('gnrgh.gh_user').importUser(owner_data)
+            owner_id = self.db.table('gnrgh.gh_user').importUser(owner_data, git_host_id=git_host_id)
 
-        # Find repository_id if repository data present
-        repository_id = None
-        repo_data = artifact_data.get('repository')
-        if repo_data and repo_data.get('id'):
-            repo_github_id = repo_data['id']
-            repo_rows = self.db.table('gnrgh.repository').query(
-                columns='$id',
-                where='$github_id=:gid',
-                gid=repo_github_id
-            ).fetch()
-            if repo_rows:
-                repository_id = repo_rows[0]['id']
+        repository_id = self.db.table('gnrgh.repository').pkeyFromExternal(
+            git_host_id, (artifact_data.get('repository') or {}).get('id'))
 
         with self.recordToUpdate(**kw) as rec:
+            rec['git_host_id'] = git_host_id
             rec['github_id'] = github_id
             rec['organization_id'] = rec['organization_id'] or organization_id
             rec['repository_id'] = repository_id

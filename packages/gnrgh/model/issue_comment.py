@@ -9,9 +9,11 @@ class Table(object):
                         caption_field='body_preview')
         self.sysFields(tbl)
 
-        # GitHub unique identifier
-        tbl.column('github_id', dtype='L', unique=True, indexed=True,
-                   name_long='!![en]GitHub ID')
+        # Identity on its git server: github_id is unique within the git_host
+        tbl.column('git_host_id', size='22', group='_', name_long='!![en]Git Host').relation(
+            'git_host.id', relation_name='issue_comments', mode='foreignkey', onDelete='raise')
+        tbl.column('github_id', dtype='L', indexed=True, name_long='!![en]GitHub ID')
+        tbl.compositeColumn('host_github_id', columns='git_host_id,github_id', unique=True)
 
         # Relations
         tbl.column('issue_id', size='22', group='_',
@@ -61,15 +63,21 @@ class Table(object):
             The pkey of the imported/updated record
         """
         github_id = comment_data['id']
-        kw = dict(pkey=pkey) if pkey else dict(github_id=github_id, insertMissing=True)
+        if pkey:
+            issue_id = self.readColumns(pkey=pkey, columns='$issue_id')
+        git_host_id = self.db.table('gnrgh.issue').readColumns(pkey=issue_id, columns='$git_host_id')
+        pkey = pkey or self.pkeyFromExternal(git_host_id, github_id)
+        kw = dict(pkey=pkey) if pkey else dict(git_host_id=git_host_id, github_id=github_id,
+                                               insertMissing=True)
 
         # Import/update author
         author_id = None
         user_data = comment_data.get('user')
         if user_data:
-            author_id = self.db.table('gnrgh.gh_user').importUser(user_data)
+            author_id = self.db.table('gnrgh.gh_user').importUser(user_data, git_host_id=git_host_id)
 
         with self.recordToUpdate(**kw) as rec:
+            rec['git_host_id'] = git_host_id
             rec['github_id'] = github_id
             rec['issue_id'] = rec['issue_id'] or issue_id
             rec['author_id'] = author_id
@@ -98,12 +106,13 @@ class Table(object):
                 imported.append(pkey)
         return imported
 
-    def processEvent(self, payload, action=None):
+    def processEvent(self, payload, action=None, git_host_id=None):
         """Process a webhook event for issue comments.
 
         Args:
             payload: Complete webhook payload dict
             action: Action type (created, edited, deleted)
+            git_host_id: the server that sent the event
 
         Returns:
             The pkey of the created/updated comment, or None if not processed
@@ -113,24 +122,13 @@ class Table(object):
             return None
 
         if action == 'deleted':
-            # Remove deleted comment
-            github_id = comment_data.get('id')
-            if github_id:
-                self.deleteSelection(where='$github_id=:gid', gid=github_id)
+            pkey = self.pkeyFromExternal(git_host_id, comment_data.get('id'))
+            if pkey:
+                self.delete({'id': pkey})
             return None
 
-        # Get issue_id from the payload
-        issue_id = None
-        issue_data = payload.get('issue')
-        if issue_data:
-            issue_github_id = issue_data.get('id')
-            issue_rec = self.db.table('gnrgh.issue').query(
-                columns='$id',
-                where='$github_id=:gid', gid=issue_github_id
-            ).fetch()
-            if issue_rec:
-                issue_id = issue_rec[0]['id']
-
+        issue_id = self.db.table('gnrgh.issue').pkeyFromExternal(
+            git_host_id, (payload.get('issue') or {}).get('id'))
         if not issue_id:
             return None
 

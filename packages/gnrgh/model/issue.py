@@ -9,9 +9,11 @@ class Table(object):
                         caption_field='title')
         self.sysFields(tbl)
 
-        # GitHub unique identifier
-        tbl.column('github_id', dtype='L', unique=True, indexed=True,
-                   name_long='!![en]GitHub ID')
+        # Identity on its git server: github_id is unique within the git_host
+        tbl.column('git_host_id', size='22', group='_', name_long='!![en]Git Host').relation(
+            'git_host.id', relation_name='issues', mode='foreignkey', onDelete='raise')
+        tbl.column('github_id', dtype='L', indexed=True, name_long='!![en]GitHub ID')
+        tbl.compositeColumn('host_github_id', columns='git_host_id,github_id', unique=True)
 
         # Relations
         tbl.column('repository_id', size='22', group='_',
@@ -66,11 +68,11 @@ class Table(object):
         # Formula column for current user connection (author or assignee)
         tbl.formulaColumn('is_user_connected',
             exists=dict(table='gnrgh.gh_user_connection',
-                        where='$issue_id=#THIS.id AND $gh_user_id=:env_gh_user_id'),
+                        where='$issue_id=#THIS.id AND @gh_user_id.adm_user_id=:env_user_id'),
             dtype='B', name_long='!![en]Connected')
 
         tbl.formulaColumn('is_user_author',
-            '$author_id=:env_gh_user_id',
+            '@author_id.adm_user_id=:env_user_id',
             dtype='B', name_long='!![en]Author')
 
         tbl.formulaColumn('cnt_user',"CASE WHEN $is_user_connected IS TRUE THEN 1 ELSE 0 END",dtype='L',
@@ -93,22 +95,29 @@ class Table(object):
             return None
 
         github_id = issue_data['id']
-        if not pkey and repository_id:
+        if pkey:
+            repository_id = self.readColumns(pkey=pkey, columns='$repository_id')
+        git_host_id = self.db.table('gnrgh.repository').readColumns(
+            pkey=repository_id, columns='$git_host_id')
+        if not pkey:
             # a repository migrated to another forge (GitHub -> Forgejo) keeps issue
             # numbers but gets new ids: find the record by number, it takes the new id
-            found = self.query(where='$github_id=:g', g=github_id, columns='$id').fetch() or \
-                self.query(where='$repository_id=:r AND $number=:n',
-                           r=repository_id, n=issue_data['number'], columns='$id').fetch()
-            pkey = found[0]['id'] if found else None
-        kw = dict(pkey=pkey) if pkey else dict(github_id=github_id, insertMissing=True)
+            pkey = self.pkeyFromExternal(git_host_id, github_id)
+            if not pkey:
+                found = self.query(where='$repository_id=:r AND $number=:n',
+                                   r=repository_id, n=issue_data['number'], columns='$id').fetch()
+                pkey = found[0]['id'] if found else None
+        kw = dict(pkey=pkey) if pkey else dict(git_host_id=git_host_id, github_id=github_id,
+                                               insertMissing=True)
 
         # Import/update author
         author_id = None
         user_data = issue_data.get('user')
         if user_data:
-            author_id = self.db.table('gnrgh.gh_user').importUser(user_data)
+            author_id = self.db.table('gnrgh.gh_user').importUser(user_data, git_host_id=git_host_id)
 
         with self.recordToUpdate(**kw) as rec:
+            rec['git_host_id'] = git_host_id
             rec['github_id'] = github_id
             rec['repository_id'] = rec['repository_id'] or repository_id
             rec['author_id'] = author_id
@@ -146,12 +155,13 @@ class Table(object):
             issue_id=issue_id
         )
 
-    def processEvent(self, payload, action=None):
+    def processEvent(self, payload, action=None, git_host_id=None):
         """Process a webhook event for issues.
 
         Args:
             payload: Complete webhook payload dict
             action: Action type (opened, closed, edited, etc.)
+            git_host_id: the server that sent the event
 
         Returns:
             The pkey of the created/updated issue, or None if not processed
@@ -160,16 +170,10 @@ class Table(object):
         if not issue_data:
             return None
 
-        # Get repository_id from the payload
-        repository_id = None
-        repo_data = payload.get('repository')
-        if repo_data:
-            repo_id = repo_data.get('id')
-            repo_rec = self.db.table('gnrgh.repository').query(
-                where='$github_id=:gid', gid=repo_id
-            ).fetch()
-            if repo_rec:
-                repository_id = repo_rec[0]['id']
+        repository_id = self.db.table('gnrgh.repository').pkeyFromExternal(
+            git_host_id, (payload.get('repository') or {}).get('id'))
+        if not repository_id:
+            return None
 
         # Import/update the issue
         return self.importIssue(issue_data, repository_id=repository_id)

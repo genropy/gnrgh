@@ -108,26 +108,17 @@ class Table(object):
         self.db.commit()
         return len(imported_names)
 
-    def processEvent(self, payload, action=None):
+    def processEvent(self, payload, action=None, git_host_id=None):
         """Process webhook events for branches.
 
         Handles 'create' and 'delete' events with ref_type='branch',
         and 'push' events to update commit_sha.
         """
         event_type = payload.get('ref_type')
-        repo_data = payload.get('repository')
-        if not repo_data:
+        repository_id = self.db.table('gnrgh.repository').pkeyFromExternal(
+            git_host_id, (payload.get('repository') or {}).get('id'))
+        if not repository_id:
             return None
-
-        # Find the repository
-        repo_github_id = repo_data['id']
-        repo_tbl = self.db.table('gnrgh.repository')
-        repo_recs = repo_tbl.query(
-            where='$github_id=:gid', gid=repo_github_id
-        ).fetch()
-        if not repo_recs:
-            return None
-        repository_id = repo_recs[0]['id']
 
         if action == 'create' and event_type == 'branch':
             branch_name = payload.get('ref')

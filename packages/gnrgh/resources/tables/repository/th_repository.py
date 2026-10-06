@@ -509,7 +509,8 @@ class Form(BaseComponent):
         user_tbl = self.db.table('gnrgh.gh_user')
         connection_tbl = self.db.table('gnrgh.gh_user_connection')
 
-        full_name = repo_tbl.readColumns(pkey=repository_id, columns='$full_name')
+        full_name, git_host_id = repo_tbl.readColumns(pkey=repository_id,
+                                                      columns='$full_name,$git_host_id')
         if not full_name:
             return
 
@@ -532,7 +533,7 @@ class Form(BaseComponent):
 
         # Import collaborators and create connections
         for collab_data in collaborators:
-            user_pkey = user_tbl.importUser(collab_data)
+            user_pkey = user_tbl.importUser(collab_data, git_host_id=git_host_id)
             if user_pkey:
                 username = collab_data.get('login')
                 # Use role from topic if available, otherwise None

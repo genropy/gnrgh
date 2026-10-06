@@ -9,9 +9,11 @@ class Table(object):
                         caption_field='name')
         self.sysFields(tbl)
 
-        # GitHub unique identifier
-        tbl.column('github_id', dtype='L', unique=True, indexed=True,
-                   name_long='!![en]GitHub ID')
+        # Identity on its git server: github_id is unique within the git_host
+        tbl.column('git_host_id', size='22', group='_', name_long='!![en]Git Host').relation(
+            'git_host.id', relation_name='repo_labels', mode='foreignkey', onDelete='raise')
+        tbl.column('github_id', dtype='L', indexed=True, name_long='!![en]GitHub ID')
+        tbl.compositeColumn('host_github_id', columns='git_host_id,github_id', unique=True)
 
         # Repository relation
         tbl.column('repository_id', size='22', group='_',
@@ -38,8 +40,12 @@ class Table(object):
             The pkey of the imported/updated record
         """
         github_id = label_data['id']
+        git_host_id = self.db.table('gnrgh.repository').readColumns(
+            pkey=repository_id, columns='$git_host_id')
 
-        with self.recordToUpdate(github_id=github_id, insertMissing=True) as rec:
+        with self.recordToUpdate(git_host_id=git_host_id, github_id=github_id,
+                                 insertMissing=True) as rec:
+            rec['git_host_id'] = git_host_id
             rec['github_id'] = github_id
             rec['repository_id'] = repository_id
             rec['name'] = label_data['name']

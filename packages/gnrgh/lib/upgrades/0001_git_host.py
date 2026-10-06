@@ -6,37 +6,45 @@ access_token into gnrgh.git_host and adm.user.gh_user_id into
 gnrgh.gh_user.adm_user_id. The old columns leave the model but stay in the
 database: they are read with raw SQL.
 
+Every step after the first is one SQL statement per table: the production
+tables hold tens of thousands of rows (webhook_event alone 66k, 400 MB of
+payload) and one ORM update per row took hours.
+
 Idempotent: every step works on rows with git_host_id IS NULL. Rows the
 script cannot decide (a gh_user referenced from two servers, organizations of
 one server with different tokens) are printed and left to a manual fix.
 """
 
-# webhook_event rows read per query in step 6
-EVENTS_BATCH = 500
-
-# path from each imported table to the git_host of its organization
+# imported table -> SQL expression of its organization's git_host, given the row e
 ORGANIZATION_HOST = {
-    'repository': '@organization_id.git_host_id',
-    'issue': '@repository_id.@organization_id.git_host_id',
-    'pull_request': '@repository_id.@organization_id.git_host_id',
-    'issue_comment': '@issue_id.@repository_id.@organization_id.git_host_id',
-    'gh_repo_label': '@repository_id.@organization_id.git_host_id',
-    'gh_artifact': '@organization_id.git_host_id',
-    'gh_artifact_version': '@artifact_id.@organization_id.git_host_id',
+    'repository': '(SELECT git_host_id FROM gnrgh.gnrgh_organization WHERE id=e.organization_id)',
+    'issue': '(SELECT git_host_id FROM gnrgh.gnrgh_repository WHERE id=e.repository_id)',
+    'pull_request': '(SELECT git_host_id FROM gnrgh.gnrgh_repository WHERE id=e.repository_id)',
+    'issue_comment': '(SELECT git_host_id FROM gnrgh.gnrgh_issue WHERE id=e.issue_id)',
+    'gh_repo_label': '(SELECT git_host_id FROM gnrgh.gnrgh_repository WHERE id=e.repository_id)',
+    'gh_artifact': '(SELECT git_host_id FROM gnrgh.gnrgh_organization WHERE id=e.organization_id)',
+    'gh_artifact_version': '(SELECT git_host_id FROM gnrgh.gnrgh_gh_artifact WHERE id=e.artifact_id)',
 }
 
-# columns pointing to gh_user, with the git_host of the pointing row
-GH_USER_REFERENCES = (
-    ('issue', 'author_id', '$git_host_id'),
-    ('pull_request', 'author_id', '$git_host_id'),
-    ('issue_comment', 'author_id', '$git_host_id'),
-    ('gh_artifact', 'owner_id', '$git_host_id'),
-    ('organization', 'org_user_id', '$git_host_id'),
-    ('gh_user_connection', 'gh_user_id', 'COALESCE(@organization_id.git_host_id,'
-                                         '@repository_id.git_host_id,'
-                                         '@issue_id.git_host_id,'
-                                         '@pull_request_id.git_host_id)'),
-)
+# (table, column pointing to gh_user) with the git_host of the pointing row
+GH_USER_REFERENCES = """
+    SELECT author_id AS user_id, git_host_id FROM gnrgh.gnrgh_issue
+    UNION SELECT author_id, git_host_id FROM gnrgh.gnrgh_pull_request
+    UNION SELECT author_id, git_host_id FROM gnrgh.gnrgh_issue_comment
+    UNION SELECT owner_id, git_host_id FROM gnrgh.gnrgh_gh_artifact
+    UNION SELECT org_user_id, git_host_id FROM gnrgh.gnrgh_organization
+    UNION SELECT c.gh_user_id,
+                 COALESCE((SELECT git_host_id FROM gnrgh.gnrgh_organization WHERE id=c.organization_id),
+                          (SELECT git_host_id FROM gnrgh.gnrgh_repository WHERE id=c.repository_id),
+                          (SELECT git_host_id FROM gnrgh.gnrgh_issue WHERE id=c.issue_id),
+                          (SELECT git_host_id FROM gnrgh.gnrgh_pull_request WHERE id=c.pull_request_id))
+          FROM gnrgh.gnrgh_gh_user_connection c
+"""
+
+# first <id> inside <issue> / <pull_request> of a Bag XML payload: the object's
+# own id comes before any nested object (user, repository, ...)
+ISSUE_ID_RE = r'<issue>(?:[^<]|<(?!id[ >]))*<id[^>]*>(\d+)</id>'
+PULL_REQUEST_ID_RE = r'<pull_request>(?:[^<]|<(?!id[ >]))*<id[^>]*>(\d+)</id>'
 
 
 def column_exists(db, schema, table, column):
@@ -48,7 +56,6 @@ def column_exists(db, schema, table, column):
 
 def main(db):
     git_host_tbl = db.table('gnrgh.git_host')
-    org_tbl = db.table('gnrgh.organization')
     user_tbl = db.table('gnrgh.gh_user')
     github_host_id = git_host_tbl.githubHost()
 
@@ -85,43 +92,37 @@ def main(db):
 
     # 2. organization.git_host_id from its api_url (empty = github.com)
     print('\t organization.git_host_id')
-    for org_id, api_url, access_token in organizations:
-        org_tbl.batchUpdate(dict(git_host_id=host_by_url[api_url] if api_url else github_host_id),
-                            pkey=org_id)
-    org_tbl.batchUpdate(dict(git_host_id=github_host_id), where='$git_host_id IS NULL')
+    for api_url, host_id in host_by_url.items():
+        db.execute("""UPDATE gnrgh.gnrgh_organization SET git_host_id=:h
+                      WHERE git_host_id IS NULL AND api_url=:u""", sqlargs=dict(h=host_id, u=api_url))
+    db.execute('UPDATE gnrgh.gnrgh_organization SET git_host_id=:h WHERE git_host_id IS NULL',
+               sqlargs=dict(h=github_host_id))
 
     # 3. imported tables: the host of their organization
-    for table, host_path in ORGANIZATION_HOST.items():
+    for table, host_sql in ORGANIZATION_HOST.items():
         print(f'\t {table}.git_host_id')
-        tbl = db.table(f'gnrgh.{table}')
-        rows = tbl.query(where='$git_host_id IS NULL', columns=f'$id,{host_path} AS host_id',
-                         addPkeyColumn=False).fetch()
-        for row in rows:
-            if row['host_id']:
-                tbl.batchUpdate(dict(git_host_id=row['host_id']), pkey=row['id'])
+        db.execute(f"""UPDATE gnrgh.gnrgh_{table} e SET git_host_id={host_sql}
+                       WHERE e.git_host_id IS NULL""")
 
     # 4. gh_user: the host of the rows that reference it
     print('\t gh_user.git_host_id')
-    hosts_by_user = {}  # gh_user pkey -> set of git_host pkeys
-    for table, column, host_path in GH_USER_REFERENCES:
-        rows = db.table(f'gnrgh.{table}').query(
-            where=f'${column} IS NOT NULL AND @{column}.git_host_id IS NULL',
-            columns=f'${column} AS user_id,{host_path} AS host_id', addPkeyColumn=False).fetch()
-        for row in rows:
-            if row['host_id']:
-                hosts_by_user.setdefault(row['user_id'], set()).add(row['host_id'])
-    collided = []
-    for user_id, hosts in hosts_by_user.items():
-        if len(hosts) > 1:
-            collided.append(user_id)
-        else:
-            user_tbl.batchUpdate(dict(git_host_id=hosts.pop()), pkey=user_id)
+    db.execute(f"""WITH hosts AS (
+                       SELECT user_id, MIN(git_host_id) AS host_id, COUNT(DISTINCT git_host_id) AS n
+                       FROM ({GH_USER_REFERENCES}) refs
+                       WHERE user_id IS NOT NULL AND git_host_id IS NOT NULL GROUP BY user_id)
+                   UPDATE gnrgh.gnrgh_gh_user u SET git_host_id=hosts.host_id
+                   FROM hosts WHERE u.id=hosts.user_id AND hosts.n=1 AND u.git_host_id IS NULL""")
+    collided = [r[0] for r in db.execute(f"""
+                   SELECT user_id FROM ({GH_USER_REFERENCES}) refs
+                   WHERE user_id IS NOT NULL AND git_host_id IS NOT NULL
+                   GROUP BY user_id HAVING COUNT(DISTINCT git_host_id) > 1""").fetchall()]
     # accounts nobody references were imported from github.com, the only server
     # that created gh_user rows before git_host existed
-    where = '$git_host_id IS NULL'
+    where = 'git_host_id IS NULL'
     if collided:
-        where += ' AND $id NOT IN :collided'
-    user_tbl.batchUpdate(dict(git_host_id=github_host_id), where=where, collided=collided)
+        where += ' AND id NOT IN :collided'
+    db.execute(f'UPDATE gnrgh.gnrgh_gh_user SET git_host_id=:h WHERE {where}',
+               sqlargs=dict(h=github_host_id, collided=collided))
     for user_id in collided:
         login, github_id = user_tbl.readColumns(pkey=user_id, columns='$login,$github_id')
         print(f'\t   gh_user {user_id} ({login}, id {github_id}) is referenced from more than one '
@@ -130,32 +131,24 @@ def main(db):
     # 5. gh_user.adm_user_id from the old adm.user.gh_user_id
     if column_exists(db, 'adm', 'adm_user', 'gh_user_id'):
         print('\t gh_user.adm_user_id')
-        links = db.execute(
-            'SELECT id, gh_user_id FROM adm.adm_user WHERE gh_user_id IS NOT NULL').fetchall()
-        for adm_user_id, gh_user_id in links:
-            user_tbl.batchUpdate(dict(adm_user_id=adm_user_id),
-                                 where='$id=:u AND $adm_user_id IS NULL', u=gh_user_id)
+        db.execute("""UPDATE gnrgh.gnrgh_gh_user u SET adm_user_id=a.id
+                      FROM adm.adm_user a WHERE a.gh_user_id=u.id AND u.adm_user_id IS NULL""")
 
     # 6. webhook_event: host and linked rows from the payload
     print('\t webhook_event.git_host_id, issue_id, pull_request_id')
-    event_tbl = db.table('gnrgh.webhook_event')
-    issue_tbl = db.table('gnrgh.issue')
-    pr_tbl = db.table('gnrgh.pull_request')
-    # payloads are read EVENTS_BATCH rows at a time: the table holds the raw
-    # payload of every event ever received, too much to parse in one fetch.
-    # Every batch sets git_host_id, so the next query returns the rows after it.
-    while True:
-        events = event_tbl.query(where='$git_host_id IS NULL',
-                                 columns='$id,$payload,@organization_id.git_host_id AS org_host_id,'
-                                         '@repo_id.git_host_id AS repo_host_id',
-                                 addPkeyColumn=False, order_by='$id', limit=EVENTS_BATCH).fetch()
-        if not events:
-            break
-        for event in events:
-            host_id = event['org_host_id'] or event['repo_host_id'] or github_host_id
-            payload = event['payload']
-            updater = dict(git_host_id=host_id)
-            if payload:
-                updater['issue_id'] = issue_tbl.pkeyFromExternal(host_id, payload['issue.id'])
-                updater['pull_request_id'] = pr_tbl.pkeyFromExternal(host_id, payload['pull_request.id'])
-            event_tbl.batchUpdate(updater, pkey=event['id'])
+    db.execute("""WITH todo AS (
+                      SELECT e.id,
+                             COALESCE((SELECT git_host_id FROM gnrgh.gnrgh_organization WHERE id=e.organization_id),
+                                      (SELECT git_host_id FROM gnrgh.gnrgh_repository WHERE id=e.repo_id),
+                                      :github) AS host_id,
+                             SUBSTRING(e.payload FROM :issue_re)::bigint AS issue_github_id,
+                             SUBSTRING(e.payload FROM :pr_re)::bigint AS pr_github_id
+                      FROM gnrgh.gnrgh_webhook_event e WHERE e.git_host_id IS NULL)
+                  UPDATE gnrgh.gnrgh_webhook_event e
+                  SET git_host_id=todo.host_id,
+                      issue_id=(SELECT id FROM gnrgh.gnrgh_issue i
+                                WHERE i.git_host_id=todo.host_id AND i.github_id=todo.issue_github_id),
+                      pull_request_id=(SELECT id FROM gnrgh.gnrgh_pull_request p
+                                       WHERE p.git_host_id=todo.host_id AND p.github_id=todo.pr_github_id)
+                  FROM todo WHERE e.id=todo.id""",
+               sqlargs=dict(github=github_host_id, issue_re=ISSUE_ID_RE, pr_re=PULL_REQUEST_ID_RE))

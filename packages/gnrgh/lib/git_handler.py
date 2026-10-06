@@ -5,6 +5,7 @@ import logging
 import os
 import re
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 from dateutil.relativedelta import relativedelta
 
 from gnr.core.gnrbag import Bag
@@ -41,6 +42,15 @@ class GitHandler(object):
     def _read_repo(self, repository_id):
         return self.repo_tbl.record(repository_id).output('dict')
 
+    def _clone_name(self, rec):
+        """Path of the clone under clone_base_path: <host>/<owner>/<repo>.
+
+        full_name is unique only within a git_host: two servers can both
+        hold acme/widget, so the host's domain comes first.
+        """
+        web_url = self.db.table('gnrgh.git_host').webUrl(rec['git_host_id'])
+        return '%s/%s' % (urlparse(web_url).netloc, rec['full_name'])
+
     def _classify_repo(self, full_name, repo_path):
         """Classify a repository into a repo_group based on name and content."""
         if full_name == 'genropy/genropy':
@@ -57,7 +67,7 @@ class GitHandler(object):
     def clone(self, repository_id):
         """Clone or fetch a repository locally and update tracking fields."""
         rec = self._read_repo(repository_id)
-        repo_name = rec['full_name']
+        repo_name = self._clone_name(rec)
         html_url = rec['html_url']
         branch = rec['default_branch'] or 'main'
 
@@ -78,7 +88,7 @@ class GitHandler(object):
     def pull(self, repository_id):
         """Pull latest changes for a cloned repository."""
         rec = self._read_repo(repository_id)
-        repo_name = rec['full_name']
+        repo_name = self._clone_name(rec)
         branch = rec['local_branch'] or rec['default_branch'] or 'main'
 
         self.git_local.pull(repo_name, branch)
@@ -92,7 +102,7 @@ class GitHandler(object):
     def switch_branch(self, repository_id, branch):
         """Switch the local clone to a different branch."""
         rec = self._read_repo(repository_id)
-        repo_name = rec['full_name']
+        repo_name = self._clone_name(rec)
 
         self.git_local.switch_branch(repo_name, branch)
         commit_sha = self.git_local.get_current_commit(repo_name)
@@ -104,13 +114,13 @@ class GitHandler(object):
     def diff(self, repository_id):
         """Get diff of local uncommitted changes."""
         rec = self._read_repo(repository_id)
-        return self.git_local.diff(rec['full_name'])
+        return self.git_local.diff(self._clone_name(rec))
 
     def commit_and_push(self, repository_id, message,
                         author_name=None, author_email=None):
         """Commit local changes and push to remote."""
         rec = self._read_repo(repository_id)
-        repo_name = rec['full_name']
+        repo_name = self._clone_name(rec)
         branch = rec['local_branch'] or rec['default_branch'] or 'main'
 
         self.git_local.commit(repo_name, message,
@@ -128,7 +138,7 @@ class GitHandler(object):
     def refresh_clone_status(self, repository_id):
         """Check filesystem and update clone tracking fields for one repo."""
         rec = self._read_repo(repository_id)
-        repo_name = rec['full_name']
+        repo_name = self._clone_name(rec)
 
         if not repo_name or not self.git_local.is_cloned(repo_name):
             with self.repo_tbl.recordToUpdate(pkey=repository_id) as r:
@@ -407,29 +417,33 @@ class GitHandler(object):
     def discover_local_clones(self):
         """Scan the clone directory and list clones not yet in DB.
 
-        Returns list of full_name strings found on disk but missing
-        from the repository table.
+        Returns list of <host>/<owner>/<repo> strings found on disk but
+        missing from the repository table.
         """
         base_path = self.git_local.clone_base_path
         known = set()
-        rows = self.repo_tbl.query(columns='$full_name').fetch()
+        rows = self.repo_tbl.query(columns='$full_name,$git_host_id').fetch()
         for row in rows:
-            if row['full_name']:
-                known.add(row['full_name'])
+            if row['full_name'] and row['git_host_id']:
+                known.add(self._clone_name(row))
 
         orphans = []
         if not os.path.isdir(base_path):
             return orphans
 
-        for org_name in sorted(os.listdir(base_path)):
-            org_path = os.path.join(base_path, org_name)
-            if not os.path.isdir(org_path) or org_name.startswith('.'):
+        for host_name in sorted(os.listdir(base_path)):
+            host_path = os.path.join(base_path, host_name)
+            if not os.path.isdir(host_path) or host_name.startswith('.'):
                 continue
-            for repo_name in sorted(os.listdir(org_path)):
-                repo_path = os.path.join(org_path, repo_name)
-                if not os.path.isdir(os.path.join(repo_path, '.git')):
+            for org_name in sorted(os.listdir(host_path)):
+                org_path = os.path.join(host_path, org_name)
+                if not os.path.isdir(org_path) or org_name.startswith('.'):
                     continue
-                full_name = '%s/%s' % (org_name, repo_name)
-                if full_name not in known:
-                    orphans.append(full_name)
+                for repo_name in sorted(os.listdir(org_path)):
+                    repo_path = os.path.join(org_path, repo_name)
+                    if not os.path.isdir(os.path.join(repo_path, '.git')):
+                        continue
+                    clone_name = '%s/%s/%s' % (host_name, org_name, repo_name)
+                    if clone_name not in known:
+                        orphans.append(clone_name)
         return orphans

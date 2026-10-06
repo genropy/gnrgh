@@ -175,3 +175,14 @@ def test_upgrade_script_moves_adm_user_link_and_creates_hosts(db, hosts, capsys)
     assert linked == {'one': 'https://one.example/api/v1',
                       'two_a': 'https://two.example/api/v1',
                       'two_b': 'https://two.example/api/v1'}
+
+
+def test_clone_directory_is_prefixed_with_the_host(db, hosts):
+    from gnrpkg.gnrgh.git_handler import GitHandler
+    handler = GitHandler(db=db)
+    names = {}
+    for host in ('github', 'forgejo'):
+        repository_id = import_repo(db, hosts, host)
+        names[host] = handler._clone_name(handler._read_repo(repository_id))
+    assert names['github'] == 'github.com/acme/widget'
+    assert names['forgejo'] == 'hub.example/acme/widget'

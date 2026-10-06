@@ -11,11 +11,15 @@ class GnrCustomWebPage(object):
     py_requires = 'gnrcomponents/externalcall:BaseRpc'
 
     @public_method
-    def receiveWebhook(self, **kwargs):
+    def receiveWebhook(self, git_host_id=None, **kwargs):
         """
-        Receives and processes GitHub webhooks.
+        Receives and processes GitHub and Forgejo webhooks.
         Authenticates the request using the webhook_secret preference
         and saves the event to the webhook_event table.
+
+        The url of the webhook names the server: /ep/receiveWebhook/<git_host_id>.
+        Without git_host_id (webhooks configured before git_host existed) the
+        event is attributed to github.com.
         """
         # Get the webhook secret from package preferences
         webhook_secret = self.db.application.getPreference('webhook_secret', pkg='gnrgh')
@@ -57,11 +61,11 @@ class GnrCustomWebPage(object):
         except (json.JSONDecodeError, UnicodeDecodeError) as e:
             raise GnrException(f'!![en]Failed to parse webhook payload: {str(e)}')           
 
-        # Forgejo sends the GitHub headers too, plus its own X-Forgejo-*
-        is_forgejo = bool(self.request.get_header('X-Forgejo-Event'))
+        if not git_host_id:
+            git_host_id = self.db.table('gnrgh.git_host').githubHost()
         stored = self.db.table('gnrgh.webhook_event').storeEvent(
-            payload_data, event=event_type, delivery_id=delivery_id,
-            received_at=datetime.now(timezone.utc), is_forgejo=is_forgejo)
+            payload_data, git_host_id=git_host_id, event=event_type, delivery_id=delivery_id,
+            received_at=datetime.now(timezone.utc))
         self.db.commit()
 
         return {'success': True, 'delivery_id': delivery_id, 'event': event_type, 'ignored': not stored}

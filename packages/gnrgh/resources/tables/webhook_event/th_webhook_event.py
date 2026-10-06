@@ -13,6 +13,7 @@ class View(BaseComponent):
         r.fieldcell('action')
         r.fieldcell('repo_id')
         r.fieldcell('organization_id')
+        r.fieldcell('@git_host_id.description', name='!![en]Git Host', width='8em')
 
     def th_order(self):
         return 'received_at:d'

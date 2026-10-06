@@ -12,6 +12,7 @@ class View(BaseComponent):
                _customGetter="function(row){var url=row.avatar_url; return url ? '<img src=\"'+url+'\" style=\"width:24px;height:24px;border-radius:50%\">' : '';}")
         r.fieldcell('login')
         r.fieldcell('name', width='15em')
+        r.fieldcell('@git_host_id.description', name='!![en]Git Host', width='10em')
         r.fieldcell('github_id', width='8em')
         r.fieldcell('num_repositories', name='# Repos', width='6em')
         r.fieldcell('github_created_at', width='10em')
@@ -60,13 +61,11 @@ class Form(BaseComponent):
         fb.field('html_url', colspan=2)
         fb.field('github_created_at', readonly=True)
         fb.field('github_updated_at', readonly=True)
-        fb.field('forge_type')
-        fb.field('api_url', colspan=2)
-        fb.field('access_token', type='password')
+        fb.field('git_host_id', colspan=2)
 
     def organizationRepositories(self, pane):
         th = pane.dialogTableHandler(relation='@repositories', batchAssign=True,
-                                     viewResource='ViewFromOrganization',
+                                viewResource='ViewFromOrganization',
                                      addrow=False, delrow=False,
                                      margin='2px', border='1px solid silver', rounded=4)
         th.view.top.bar.replaceSlots('#', '#,syncBtn')
@@ -80,7 +79,7 @@ class Form(BaseComponent):
 
     def organizationArtifacts(self, pane):
         th = pane.dialogTableHandler(relation='@artifacts',
-                                     viewResource='ViewFromOrganization',
+                                viewResource='ViewFromOrganization',
                                      addrow=False, delrow=False,
                                      margin='2px', border='1px solid silver', rounded=4)
         th.view.top.bar.replaceSlots('#', '#,syncBtn')
@@ -111,10 +110,10 @@ class Form(BaseComponent):
                     _onResult='this.form.reload();')
 
     def organizationEvents(self, pane):
-        th = pane.plainTableHandler(relation='@source_events',
-                                     viewResource='ViewFromOrganization',
-                                     margin='2px', border='1px solid silver',
-                                     rounded=4)
+        pane.plainTableHandler(relation='@webhook_events',
+                                viewResource='ViewFromOrganization',
+                                margin='2px', border='1px solid silver',
+                                rounded=4)
 
     @public_method
     def rpc_org_update(self, organization_id=None):
@@ -169,7 +168,11 @@ class Form(BaseComponent):
 
     @public_method
     def rpc_createAdmUsersFromMembers(self, connection_pkeys=None):
-        """Create ADM users from selected GitHub organization members."""
+        """Create ADM users from selected organization members.
+
+        An account whose login matches an existing adm.user username is linked
+        to that user; otherwise a new adm.user is created with status 'wait'.
+        """
         if not connection_pkeys:
             return
 
@@ -179,38 +182,30 @@ class Form(BaseComponent):
 
         created_count = 0
         for connection_id in connection_pkeys:
-            # Get gh_user_id from connection
             gh_user_id = connection_tbl.readColumns(pkey=connection_id, columns='$gh_user_id')
             if not gh_user_id:
                 continue
 
-            # Get GitHub user login and check if adm_user already exists
-            gh_user_data = gh_user_tbl.record(pkey=gh_user_id, columns='$login,$adm_user_id').output('dict')
-            if not gh_user_data or gh_user_data.get('adm_user_id'):
+            login, adm_user_id = gh_user_tbl.readColumns(pkey=gh_user_id,
+                                                         columns='$login,$adm_user_id')
+            if adm_user_id or not login:
                 continue
 
-            login = gh_user_data.get('login')
-            if not login:
-                continue
-
-            # Check if username already exists in adm.user
             existing = adm_user_tbl.query(
                 columns='$id',
                 where='$username=:username',
                 username=login
             ).fetch()
-
             if existing:
-                adm_user_tbl.update(dict(id=existing[0]['id'], gh_user_id=gh_user_id))
-                continue
-
-            # Create new adm.user with status='wait' and link to gh_user
-            adm_user_tbl.insert(adm_user_tbl.newrecord(
-                username=login,
-                status='wait',
-                gh_user_id=gh_user_id
-            ))
-            created_count += 1
+                adm_user_id = existing[0]['id']
+            else:
+                adm_user_id = adm_user_tbl.insert(adm_user_tbl.newrecord(
+                    username=login,
+                    status='wait'
+                ))['id']
+                created_count += 1
+            with gh_user_tbl.recordToUpdate(gh_user_id) as rec:
+                rec['adm_user_id'] = adm_user_id
 
         self.db.commit()
         return created_count

@@ -145,11 +145,15 @@ class Table(object):
         if issue_id:
             entity_field = 'issue_id'
             entity_id = issue_id
+            entity_tbl = self.db.table('gnrgh.issue')
         elif pull_request_id:
             entity_field = 'pull_request_id'
             entity_id = pull_request_id
+            entity_tbl = self.db.table('gnrgh.pull_request')
         else:
             return
+
+        git_host_id = entity_tbl.readColumns(pkey=entity_id, columns='$git_host_id')
 
         # Delete existing assignee connections for this entity (repo_role_code is NULL for assignees)
         self.deleteSelection(
@@ -159,7 +163,7 @@ class Table(object):
 
         # Add new assignee connections (without repo_role_code)
         for assignee_data in assignees_data:
-            user_pkey = user_tbl.importUser(assignee_data)
+            user_pkey = user_tbl.importUser(assignee_data, git_host_id=git_host_id)
             if user_pkey:
                 self.addConnection(
                     gh_user_id=user_pkey,
@@ -177,6 +181,9 @@ class Table(object):
             organization_id: the organization pkey
             login: organization login name for API calls
         """
+        git_host_id = self.db.table('gnrgh.organization').readColumns(
+            pkey=organization_id, columns='$git_host_id')
+
         # Delete all existing member connections for this org
         self.deleteSelection(
             where='$organization_id=:organization_id',
@@ -186,7 +193,7 @@ class Table(object):
         # Sync owners (admin role in API = owner membership)
         owners = github_service.getOrgMembers(organization=login, role='admin')
         for member_data in owners:
-            user_pkey = user_tbl.importUser(member_data)
+            user_pkey = user_tbl.importUser(member_data, git_host_id=git_host_id)
             if user_pkey:
                 self.addConnection(
                     gh_user_id=user_pkey,
@@ -197,7 +204,7 @@ class Table(object):
         # Sync members
         members = github_service.getOrgMembers(organization=login, role='member')
         for member_data in members:
-            user_pkey = user_tbl.importUser(member_data)
+            user_pkey = user_tbl.importUser(member_data, git_host_id=git_host_id)
             if user_pkey:
                 self.addConnection(
                     gh_user_id=user_pkey,
@@ -214,6 +221,9 @@ class Table(object):
             repository_id: the repository pkey
             repo_role_code: the role code to assign
         """
+        git_host_id = self.db.table('gnrgh.repository').readColumns(
+            pkey=repository_id, columns='$git_host_id')
+
         # Delete existing collaborator connections for this repo with this role
         self.deleteSelection(
             where='$repository_id=:repository_id AND $repo_role_code=:repo_role_code',
@@ -223,7 +233,7 @@ class Table(object):
 
         # Add new collaborator connections
         for collab_data in collaborators_data:
-            user_pkey = user_tbl.importUser(collab_data)
+            user_pkey = user_tbl.importUser(collab_data, git_host_id=git_host_id)
             if user_pkey:
                 self.addConnection(
                     gh_user_id=user_pkey,
@@ -280,6 +290,8 @@ class Table(object):
             repository_id: The repository pkey
         """
         user_tbl = self.db.table('gnrgh.gh_user')
+        git_host_id = self.db.table('gnrgh.repository').readColumns(
+            pkey=repository_id, columns='$git_host_id')
 
         # Get role assignments from topics
         role_assignments = self.getRoleTopics(repository_id)
@@ -292,11 +304,11 @@ class Table(object):
 
         # Create connections from role assignments
         for repo_role_code, username in role_assignments:
-            # Find user by login
+            # Find user by login on the server of the repository
             user_rows = user_tbl.query(
                 columns='$id',
-                where='$login=:login',
-                login=username
+                where='$login=:login AND $git_host_id=:git_host_id',
+                login=username, git_host_id=git_host_id
             ).fetch()
 
             if not user_rows:

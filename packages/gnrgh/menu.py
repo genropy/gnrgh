@@ -17,4 +17,5 @@ class Menu(object):
         git.webpage("!![en]IDE", filepath="/gnrgh/gnride")
         # Admin
         git.thpage("!![en]Webhook Events", table="gnrgh.webhook_event")
+        git.thpage("!![en]Git Hosts", table="gnrgh.git_host")
         git.lookupBranch("!![en]Utility tables", pkg="gnrgh")

@@ -10,10 +10,14 @@ class Table(object):
                         name_plural='!![en]Repositories', caption_field='name', archivable=True)
         self.sysFields(tbl)
 
-        # Indexed fields (for queries/filters)
-        tbl.column('github_id', dtype='L', unique=True, indexed=True, name_long='!![en]GitHub ID')
+        # Identity on its git server: github_id is unique within the git_host
+        tbl.column('git_host_id', size='22', group='_', name_long='!![en]Git Host').relation(
+            'git_host.id', relation_name='repositories', mode='foreignkey', onDelete='raise')
+        tbl.column('github_id', dtype='L', indexed=True, name_long='!![en]GitHub ID')
+        tbl.compositeColumn('host_github_id', columns='git_host_id,github_id', unique=True)
         tbl.column('name', name_long='!![en]Name')
-        tbl.column('full_name', unique=True, indexed=True, name_long='!![en]Full Name')  # "org/repo"
+        tbl.column('full_name', indexed=True, name_long='!![en]Full Name')  # "org/repo"
+        tbl.compositeColumn('host_full_name', columns='git_host_id,full_name', unique=True)
         tbl.column('private', dtype='B', indexed=True, name_long='!![en]Private')
         tbl.column('archived', dtype='B', indexed=True, name_long='!![en]Archived')
 
@@ -73,28 +77,28 @@ class Table(object):
         # Formula column for current user connection
         tbl.formulaColumn('is_user_connected',
             exists=dict(table='gnrgh.gh_user_connection',
-                        where='$repository_id=#THIS.id AND $gh_user_id=:env_gh_user_id'),
+                        where='$repository_id=#THIS.id AND @gh_user_id.adm_user_id=:env_user_id'),
             dtype='B', name_long='!![en]Connected')
 
         # Formula columns for user activity on open issues/PRs
         tbl.formulaColumn('has_user_open_issues',
             exists=dict(table='gnrgh.issue',
-                        where="$repository_id=#THIS.id AND $state='open' AND $author_id=:env_gh_user_id"),
+                        where="$repository_id=#THIS.id AND $state='open' AND @author_id.adm_user_id=:env_user_id"),
             dtype='B', name_long='!![en]Has My Issues')
 
         tbl.formulaColumn('has_user_assigned_issues',
             exists=dict(table='gnrgh.gh_user_connection',
-                        where="@issue_id.repository_id=#THIS.id AND @issue_id.state='open' AND $gh_user_id=:env_gh_user_id"),
+                        where="@issue_id.repository_id=#THIS.id AND @issue_id.state='open' AND @gh_user_id.adm_user_id=:env_user_id"),
             dtype='B', name_long='!![en]Has Assigned Issues')
 
         tbl.formulaColumn('has_user_open_prs',
             exists=dict(table='gnrgh.pull_request',
-                        where="$repository_id=#THIS.id AND $state='open' AND $author_id=:env_gh_user_id"),
+                        where="$repository_id=#THIS.id AND $state='open' AND @author_id.adm_user_id=:env_user_id"),
             dtype='B', name_long='!![en]Has My PRs')
 
         tbl.formulaColumn('has_user_assigned_prs',
             exists=dict(table='gnrgh.gh_user_connection',
-                        where="@pull_request_id.repository_id=#THIS.id AND @pull_request_id.state='open' AND $gh_user_id=:env_gh_user_id"),
+                        where="@pull_request_id.repository_id=#THIS.id AND @pull_request_id.state='open' AND @gh_user_id.adm_user_id=:env_user_id"),
             dtype='B', name_long='!![en]Has Assigned PRs')
 
         tbl.formulaColumn('needs_attention',
@@ -159,38 +163,32 @@ class Table(object):
             elif v and isinstance(v, (int, float)):
                 from datetime import timezone
                 remote_repo_data[k] = datetime.fromtimestamp(v, tz=timezone.utc)
-        forge_type = None
-        api_url = None
-        if organization_id:
-            forge_type, api_url = self.db.table('gnrgh.organization').readColumns(
-                pkey=organization_id, columns='$forge_type,$api_url')
+        if pkey:
+            organization_id = organization_id or self.readColumns(pkey=pkey, columns='$organization_id')
+        git_host_tbl = self.db.table('gnrgh.git_host')
+        git_host_id, forge_type = self.db.table('gnrgh.organization').readColumns(
+            pkey=organization_id, columns='$git_host_id,@git_host_id.type')
         if forge_type == 'forgejo':
             # Forgejo has no pushed_at: updated_at changes on push
             remote_repo_data['pushed_at'] = remote_repo_data.get('updated_at')
-        if not pkey and organization_id:
-            # github_id is unique only within its forge (same api_url): a repo
-            # transferred between organizations of the same forge keeps its record
-            existing = self.query(
-                where="$github_id=:gid AND COALESCE(@organization_id.api_url,'')=:api_url",
-                gid=github_id, api_url=api_url or '', columns='$id').fetch()
-            if not existing and forge_type == 'forgejo':
+        if not pkey:
+            # a repo transferred between organizations of the same server keeps its record
+            pkey = self.pkeyFromExternal(git_host_id, github_id)
+            if not pkey and forge_type == 'forgejo':
                 # a repository migrated from GitHub (original_url) keeps its GitHub
-                # record, which moves to the hub organization with history and index
+                # record, which moves to the Forgejo host with history and index
                 migrated = re.match(r'https?://github\.com/(.+?)(\.git)?/?$',
                                     remote_repo_data.get('original_url') or '')
                 if migrated:
                     existing = self.query(
-                        where='lower($full_name)=:fn AND @organization_id.api_url IS NULL',
-                        fn=migrated.group(1).lower(), columns='$id').fetch()
-            if existing:
-                pkey = existing[0]['id']
-        if pkey:
-            kw = dict(pkey=pkey)
-        elif organization_id:
-            kw = dict(github_id=github_id, organization_id=organization_id, insertMissing=True)
-        else:
-            kw = dict(github_id=github_id, insertMissing=True)
+                        where='lower($full_name)=:fn AND $git_host_id=:gh',
+                        fn=migrated.group(1).lower(), gh=git_host_tbl.githubHost(),
+                        columns='$id').fetch()
+                    pkey = existing[0]['id'] if existing else None
+        kw = dict(pkey=pkey) if pkey else dict(git_host_id=git_host_id, github_id=github_id,
+                                               organization_id=organization_id, insertMissing=True)
         with self.recordToUpdate(**kw) as repo_rec:
+            repo_rec['git_host_id'] = git_host_id
             repo_rec['github_id'] = github_id
             repo_rec['name'] = remote_repo_data['name']
             repo_rec['full_name'] = remote_repo_data['full_name']
@@ -200,19 +198,18 @@ class Table(object):
             repo_rec['default_branch'] = remote_repo_data.get('default_branch')
             repo_rec['html_url'] = remote_repo_data.get('html_url')
             # follow transfers: the importing organization wins
-            repo_rec['organization_id'] = organization_id or repo_rec['organization_id']
+            repo_rec['organization_id'] = organization_id
             repo_rec['pushed_at'] = remote_repo_data.get('pushed_at')
             repo_rec['metadata'] = Bag(remote_repo_data)
 
         repository_id = repo_rec['id']
 
         # Import owner as gh_user and create connection
-        # (not for Forgejo: its user ids would collide with GitHub ones in gh_user)
         owner_data = remote_repo_data.get('owner')
-        if owner_data and forge_type != 'forgejo':
+        if owner_data:
             user_tbl = self.db.table('gnrgh.gh_user')
             connection_tbl = self.db.table('gnrgh.gh_user_connection')
-            owner_user_id = user_tbl.importUser(owner_data)
+            owner_user_id = user_tbl.importUser(owner_data, git_host_id=git_host_id)
             if owner_user_id:
                 connection_tbl.addConnection(
                     gh_user_id=owner_user_id,
@@ -262,12 +259,13 @@ class Table(object):
         """Clone or pull selected repositories."""
         self.pkg.getGitHandler().update_clone(pkeys=pkeys, thermo_cb=thermo_cb)
 
-    def processEvent(self, payload, action=None):
+    def processEvent(self, payload, action=None, git_host_id=None):
         """Process a webhook event for repositories.
 
         Args:
             payload: Complete webhook payload dict
             action: Action type (created, deleted, archived, etc.)
+            git_host_id: the server that sent the event
 
         Returns:
             The pkey of the created/updated repository, or None if not processed
@@ -276,16 +274,10 @@ class Table(object):
         if not repo_data:
             return None
 
-        # Get organization_id if present
-        organization_id = None
-        org_data = payload.get('organization')
-        if org_data:
-            org_id = org_data.get('id')
-            org_rec = self.db.table('gnrgh.organization').query(
-                where='$github_id=:gid', gid=org_id
-            ).fetch()
-            if org_rec:
-                organization_id = org_rec[0]['id']
+        organization_id = self.db.table('gnrgh.organization').pkeyFromExternal(
+            git_host_id, (payload.get('organization') or {}).get('id'))
+        if not organization_id:
+            return None
 
         # Import/update the repository
         repository_id = self.importRepository(repo_data, organization_id=organization_id)

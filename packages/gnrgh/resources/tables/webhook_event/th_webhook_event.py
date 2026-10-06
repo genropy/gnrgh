@@ -13,6 +13,7 @@ class View(BaseComponent):
         r.fieldcell('action')
         r.fieldcell('repo_id')
         r.fieldcell('organization_id')
+        r.fieldcell('@git_host_id.description', name='!![en]Git Host', width='8em')
 
     def th_order(self):
         return 'received_at:d'
@@ -62,8 +63,11 @@ class Form(BaseComponent):
         fb.field('delivery_id')
         fb.field('event')
         fb.field('action')
-        fb.field('repo_id')
+        fb.field('git_host_id')
         fb.field('organization_id')
+        fb.field('repo_id')
+        fb.field('issue_id')
+        fb.field('pull_request_id')
         fb.field('received_at')
         fb.field('payload')
 
@@ -81,8 +85,8 @@ class ViewFromOrganization(BaseComponent):
         r.fieldcell('event', width='10em')
         r.fieldcell('action', width='8em')
         r.fieldcell('repo_id', width='12em')
-        r.fieldcell('issue', width='8em')
-        r.fieldcell('pull_request', width='8em')
+        r.fieldcell('@issue_id.number', name='!![en]Issue', width='8em')
+        r.fieldcell('@pull_request_id.number', name='!![en]Pull request', width='8em')
 
     def th_order(self):
         return 'received_at:d'
@@ -94,8 +98,8 @@ class ViewFromRepository(BaseComponent):
         r.fieldcell('received_at', width='12em')
         r.fieldcell('event', width='10em')
         r.fieldcell('action', width='8em')
-        r.fieldcell('issue', width='8em')
-        r.fieldcell('pull_request', width='8em')
+        r.fieldcell('@issue_id.number', name='!![en]Issue', width='8em')
+        r.fieldcell('@pull_request_id.number', name='!![en]Pull request', width='8em')
         r.fieldcell('delivery_id', width='15em')
 
     def th_order(self):

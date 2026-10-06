@@ -18,9 +18,11 @@ class Main(BaseResourceAction):
         rows = self.tblobj.query(
             where='$id IN :pkeys',
             pkeys=pkeys,
-            columns='$id,$name,$repository_id,$last_sync_ts,$repo_full_name'
+            columns='$id,$name,$repository_id,$last_sync_ts,$repo_full_name,'
+                    '@repository_id.organization_id AS organization_id'
         ).fetch()
-        github_service = self.db.package('gnrgh').getGithubClient()
+        pkg = self.db.package('gnrgh')
+        clients = {}  # one client per organization: each talks to its own git_host
         commit_tbl = self.db.table('gnrgh.commit')
 
         for row in self.btc.thermo_wrapper(rows, line_code='branches',
@@ -29,6 +31,10 @@ class Main(BaseResourceAction):
             if not full_name or '/' not in full_name:
                 continue
             owner, repo_name = full_name.split('/', 1)
+            organization_id = row['organization_id']
+            if organization_id not in clients:
+                clients[organization_id] = pkg.getGithubClient(organization_id=organization_id)
+            github_service = clients[organization_id]
             kw = {}
             if row['last_sync_ts']:
                 kw['since'] = row['last_sync_ts'].isoformat()

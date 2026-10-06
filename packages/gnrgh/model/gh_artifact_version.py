@@ -10,9 +10,11 @@ class Table(object):
                         caption_field='name')
         self.sysFields(tbl)
 
-        # GitHub unique identifier
-        tbl.column('github_id', dtype='L', unique=True, indexed=True,
-                   name_long='!![en]GitHub ID')
+        # Identity on its git server: github_id is unique within the git_host
+        tbl.column('git_host_id', size='22', group='_', name_long='!![en]Git Host').relation(
+            'git_host.id', relation_name='artifact_versions', mode='foreignkey', onDelete='raise')
+        tbl.column('github_id', dtype='L', indexed=True, name_long='!![en]GitHub ID')
+        tbl.compositeColumn('host_github_id', columns='git_host_id,github_id', unique=True)
 
         # Relation to artifact (cascade delete)
         tbl.column('artifact_id', size='22', group='_',
@@ -53,9 +55,16 @@ class Table(object):
             The pkey of the imported/updated record
         """
         github_id = version_data['id']
-        kw = dict(pkey=pkey) if pkey else dict(github_id=github_id, insertMissing=True)
+        if pkey:
+            artifact_id = self.readColumns(pkey=pkey, columns='$artifact_id')
+        git_host_id = self.db.table('gnrgh.gh_artifact').readColumns(
+            pkey=artifact_id, columns='$git_host_id')
+        pkey = pkey or self.pkeyFromExternal(git_host_id, github_id)
+        kw = dict(pkey=pkey) if pkey else dict(git_host_id=git_host_id, github_id=github_id,
+                                               insertMissing=True)
 
         with self.recordToUpdate(**kw) as rec:
+            rec['git_host_id'] = git_host_id
             rec['github_id'] = github_id
             rec['artifact_id'] = rec['artifact_id'] or artifact_id
             rec['name'] = version_data['name']

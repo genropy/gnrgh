@@ -70,12 +70,17 @@ def test_webhook_events_link_to_their_server(db, hosts):
 def test_upgrade_script_is_idempotent_and_reports_collisions(db, hosts, capsys):
     user_tbl = db.table('gnrgh.gh_user')
     issue_tbl = db.table('gnrgh.issue')
+    connection_tbl = db.table('gnrgh.gh_user_connection')
     # an account imported before git_host existed, referenced from two servers
     collided = user_tbl.insert(user_tbl.newrecord(github_id=999, login='collided'))['id']
+    # the same, with the profile page that tells its server
+    profiled = user_tbl.insert(user_tbl.newrecord(github_id=997, login='profiled',
+                                                  html_url='https://github.com/profiled'))['id']
     for host in ('github', 'forgejo'):
         repository_id = import_repo(db, hosts, host)
         issue_id = issue_tbl.importIssue(issue_payload(9), repository_id=repository_id)
         issue_tbl.batchUpdate(dict(author_id=collided), pkey=issue_id)
+        connection_tbl.addConnection(gh_user_id=profiled, issue_id=issue_id)
     # an unreferenced account, and an issue without host
     lonely = user_tbl.insert(user_tbl.newrecord(github_id=998, login='lonely'))['id']
     issue_tbl.batchUpdate(dict(git_host_id=None), where='$number=9 AND $git_host_id=:h',
@@ -88,6 +93,8 @@ def test_upgrade_script_is_idempotent_and_reports_collisions(db, hosts, capsys):
     first = capsys.readouterr().out
     assert f'gh_user {collided}' in first
     assert user_tbl.readColumns(pkey=collided, columns='$git_host_id') is None
+    assert f'gh_user {profiled}' not in first
+    assert user_tbl.readColumns(pkey=profiled, columns='$git_host_id') == hosts['github']
     assert user_tbl.readColumns(pkey=lonely, columns='$git_host_id') == hosts['github']
     assert issue_tbl.query(where='$git_host_id IS NULL').count() == 0
 

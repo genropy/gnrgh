@@ -114,12 +114,12 @@ class Form(BaseComponent):
     def rpc_updateArtifactFromGithub(self, artifact_id=None):
         """Refresh single artifact from GitHub."""
         artifact_tbl = self.db.table('gnrgh.gh_artifact')
-        name, package_type, org_login = artifact_tbl.readColumns(
+        name, package_type, org_login, organization_id = artifact_tbl.readColumns(
             pkey=artifact_id,
-            columns='$name,$package_type,@organization_id.login'
+            columns='$name,$package_type,@organization_id.login,$organization_id'
         )
 
-        github_service = self.db.package('gnrgh').getGithubClient()
+        github_service = self.db.package('gnrgh').getGithubClient(organization_id=organization_id)
         packages = github_service.getPackages(
             organization=org_login,
             package_type=package_type
@@ -139,12 +139,12 @@ class Form(BaseComponent):
         artifact_tbl = self.db.table('gnrgh.gh_artifact')
         version_tbl = self.db.table('gnrgh.gh_artifact_version')
 
-        name, package_type, org_login = artifact_tbl.readColumns(
+        name, package_type, org_login, organization_id = artifact_tbl.readColumns(
             pkey=artifact_id,
-            columns='$name,$package_type,@organization_id.login'
+            columns='$name,$package_type,@organization_id.login,$organization_id'
         )
 
-        github_service = self.db.package('gnrgh').getGithubClient()
+        github_service = self.db.package('gnrgh').getGithubClient(organization_id=organization_id)
         versions = github_service.getPackageVersions(
             organization=org_login,
             package_type=package_type,

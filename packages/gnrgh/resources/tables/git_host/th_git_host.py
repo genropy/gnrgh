@@ -28,6 +28,7 @@ class Form(BaseComponent):
         fb.field('type')
         fb.field('url')
         fb.field('token', type='password')
+        fb.field('webhook_secret', type='password')
 
     def th_options(self):
         return dict(dialog_height='300px', dialog_width='500px')

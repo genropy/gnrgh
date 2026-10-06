@@ -54,6 +54,8 @@ def main(db):
     with git_host_tbl.recordToUpdate(github_host_id) as host:
         if not host['token']:
             host['token'] = db.application.getPreference('access_token', pkg='gnrgh')
+        if not host['webhook_secret']:
+            host['webhook_secret'] = db.application.getPreference('webhook_secret', pkg='gnrgh')
     host_by_url = {}   # api_url -> git_host pkey
     token_by_url = {}  # api_url -> token of that git_host
     organizations = []  # (pkey, api_url, access_token) of the organizations still to assign

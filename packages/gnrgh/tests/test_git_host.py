@@ -97,3 +97,81 @@ def test_upgrade_script_is_idempotent_and_reports_collisions(db, hosts, capsys):
     second = capsys.readouterr().out
     assert f'gh_user {collided}' in second
     assert sorted((r['id'], r['git_host_id']) for r in user_tbl.query(columns='$id,$git_host_id').fetch()) == snapshot
+
+
+def test_repository_action_uses_the_client_of_its_host(db, hosts, monkeypatch):
+    """rpc_repo_syncCollaborators on a Forgejo repository talks to the Forgejo host."""
+    from gnrpkg.gnrgh.github_client import GithubClient
+    th_repository = gnrImport(os.path.join(
+        os.path.dirname(__file__), '..', 'resources', 'tables', 'repository', 'th_repository.py'))
+    repository_id = import_repo(db, hosts, 'forgejo')
+    urls_called = []
+
+    def fake_collaborators(self, owner=None, repo=None, **kwargs):
+        urls_called.append(self.api_url)
+        return [dict(id=77, login='collab77', type='User')]
+    monkeypatch.setattr(GithubClient, 'getRepoCollaborators', fake_collaborators)
+
+    page = th_repository.Form.__new__(th_repository.Form)  # the method reads only self.db
+    page.db = db
+    page.rpc_repo_syncCollaborators(repository_id=repository_id)
+
+    forgejo_url = db.table('gnrgh.git_host').readColumns(pkey=hosts['forgejo'], columns='$url')
+    assert urls_called == [forgejo_url]
+    collab = db.table('gnrgh.gh_user').query(where='$github_id=77', columns='$git_host_id').fetch()
+    assert [c['git_host_id'] for c in collab] == [hosts['forgejo']]
+
+
+def test_host_without_token_never_uses_the_local_gh_token(db, hosts):
+    import pytest
+    git_host_tbl = db.table('gnrgh.git_host')
+    with git_host_tbl.recordToUpdate(hosts['forgejo']) as rec:
+        rec['token'] = None
+    db.commit()
+    try:
+        with pytest.raises(ValueError):
+            git_host_tbl.getClient(hosts['forgejo'])
+    finally:
+        with git_host_tbl.recordToUpdate(hosts['forgejo']) as rec:
+            rec['token'] = 't'
+        db.commit()
+
+
+def test_upgrade_script_moves_adm_user_link_and_creates_hosts(db, hosts, capsys):
+    """Step 5 (adm.user.gh_user_id -> gh_user.adm_user_id) and step 1 (one host per
+    api_url, organizations of one host with different tokens reported)."""
+    user_tbl = db.table('gnrgh.gh_user')
+    adm_user_tbl = db.table('adm.user')
+    git_host_tbl = db.table('gnrgh.git_host')
+    org_tbl = db.table('gnrgh.organization')
+    # the legacy columns, as they stay in a migrated database
+    db.execute('ALTER TABLE adm.adm_user ADD COLUMN IF NOT EXISTS gh_user_id character(22)')
+    db.execute('ALTER TABLE gnrgh.gnrgh_organization ADD COLUMN IF NOT EXISTS api_url text, '
+               'ADD COLUMN IF NOT EXISTS access_token text')
+    account = user_tbl.importUser(dict(id=501, login='legacy'), git_host_id=hosts['github'])
+    legacy_user = adm_user_tbl.insert(adm_user_tbl.newrecord(username='legacy', status='conf'))['id']
+    db.execute('UPDATE adm.adm_user SET gh_user_id=:a WHERE id=:u', sqlargs=dict(a=account, u=legacy_user))
+    for login, url, token in (('one', 'https://one.example/api/v1', 'tok1'),
+                              ('two_a', 'https://two.example/api/v1', 'tokA'),
+                              ('two_b', 'https://two.example/api/v1', 'tokB')):
+        org = org_tbl.insert(org_tbl.newrecord(login=login, github_id=1, git_host_id=None))
+        db.execute('UPDATE gnrgh.gnrgh_organization SET api_url=:u, access_token=:t WHERE id=:o',
+                   sqlargs=dict(u=url, t=token, o=org['id']))
+    db.commit()
+
+    gnrImport(UPGRADE_SCRIPT).main(db)
+    db.commit()
+    out = capsys.readouterr().out
+
+    assert user_tbl.readColumns(pkey=account, columns='$adm_user_id') == legacy_user
+    hosts_by_url = {h['url']: h for h in git_host_tbl.query(columns='$url,$token,$type').fetch()}
+    assert hosts_by_url['https://one.example/api/v1']['token'] == 'tok1'
+    assert hosts_by_url['https://two.example/api/v1']['token'] == 'tokA'
+    assert hosts_by_url['https://two.example/api/v1']['type'] == 'forgejo'
+    assert 'token differs' in out
+    linked = {r['login']: r['url'] for r in org_tbl.query(
+        where='$login IN :l', l=['one', 'two_a', 'two_b'],
+        columns='$login,@git_host_id.url AS url').fetch()}
+    assert linked == {'one': 'https://one.example/api/v1',
+                      'two_a': 'https://two.example/api/v1',
+                      'two_b': 'https://two.example/api/v1'}

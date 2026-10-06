@@ -406,11 +406,11 @@ class Form(BaseComponent):
     def rpc_repo_update(self, repository_id=None):
         """Update repository and all dependencies from GitHub."""
         repo_tbl = self.db.table('gnrgh.repository')
-        github_id, name, organization, full_name = repo_tbl.readColumns(
+        github_id, name, organization, full_name, organization_id = repo_tbl.readColumns(
             pkey=repository_id,
-            columns='$github_id,$name,@organization_id.login,$full_name'
+            columns='$github_id,$name,@organization_id.login,$full_name,$organization_id'
         )
-        github_service = self.db.package('gnrgh').getGithubClient()
+        github_service = self.db.package('gnrgh').getGithubClient(organization_id=organization_id)
         owner, repo_name = full_name.split('/')
 
         # Update repository
@@ -462,13 +462,14 @@ class Form(BaseComponent):
         repo_tbl = self.db.table('gnrgh.repository')
         branch_tbl = self.db.table('gnrgh.branch')
 
-        full_name = repo_tbl.readColumns(pkey=repository_id, columns='$full_name')
+        full_name, organization_id = repo_tbl.readColumns(pkey=repository_id,
+                                                          columns='$full_name,$organization_id')
         if not full_name:
             return
 
         owner, repo_name = full_name.split('/')
 
-        github_service = self.db.package('gnrgh').getGithubClient()
+        github_service = self.db.package('gnrgh').getGithubClient(organization_id=organization_id)
         branches = github_service.getBranches(owner=owner, repo=repo_name)
 
         branch_tbl.importBranches(branches, repository_id=repository_id)
@@ -481,13 +482,14 @@ class Form(BaseComponent):
         pr_tbl = self.db.table('gnrgh.pull_request')
 
         # Get repository info
-        full_name = repo_tbl.readColumns(pkey=repository_id, columns='$full_name')
+        full_name, organization_id = repo_tbl.readColumns(pkey=repository_id,
+                                                          columns='$full_name,$organization_id')
         if not full_name:
             return
 
         owner, repo_name = full_name.split('/')
 
-        github_service = self.db.package('gnrgh').getGithubClient()
+        github_service = self.db.package('gnrgh').getGithubClient(organization_id=organization_id)
 
         # Sync issues (state='all' to get open and closed)
         issues = github_service.getIssues(owner=owner, repo=repo_name, state='all')
@@ -509,14 +511,14 @@ class Form(BaseComponent):
         user_tbl = self.db.table('gnrgh.gh_user')
         connection_tbl = self.db.table('gnrgh.gh_user_connection')
 
-        full_name, git_host_id = repo_tbl.readColumns(pkey=repository_id,
-                                                      columns='$full_name,$git_host_id')
+        full_name, git_host_id, organization_id = repo_tbl.readColumns(
+            pkey=repository_id, columns='$full_name,$git_host_id,$organization_id')
         if not full_name:
             return
 
         owner, repo_name = full_name.split('/')
 
-        github_service = self.db.package('gnrgh').getGithubClient()
+        github_service = self.db.package('gnrgh').getGithubClient(organization_id=organization_id)
 
         # Fetch collaborators from GitHub
         collaborators = github_service.getRepoCollaborators(owner=owner, repo=repo_name)
@@ -561,7 +563,7 @@ class Form(BaseComponent):
 
         owner, repo_name = full_name.split('/')
 
-        github_service = self.db.package('gnrgh').getGithubClient()
+        github_service = self.db.package('gnrgh').getGithubClient(organization_id=organization_id)
         packages = github_service.getPackages(organization=owner)
 
         # Filter artifacts belonging to this repository and import them
@@ -578,13 +580,14 @@ class Form(BaseComponent):
         repo_tbl = self.db.table('gnrgh.repository')
         topic_link_tbl = self.db.table('gnrgh.gh_topic_link')
 
-        full_name = repo_tbl.readColumns(pkey=repository_id, columns='$full_name')
+        full_name, organization_id = repo_tbl.readColumns(pkey=repository_id,
+                                                          columns='$full_name,$organization_id')
         if not full_name:
             return
 
         owner, repo_name = full_name.split('/')
 
-        github_service = self.db.package('gnrgh').getGithubClient()
+        github_service = self.db.package('gnrgh').getGithubClient(organization_id=organization_id)
         topics = github_service.getRepositoryTopics(owner=owner, repo=repo_name)
 
         topic_link_tbl.syncTopics(topics, repository_id=repository_id)
@@ -597,13 +600,14 @@ class Form(BaseComponent):
         repo_tbl = self.db.table('gnrgh.repository')
         label_tbl = self.db.table('gnrgh.gh_repo_label')
 
-        full_name = repo_tbl.readColumns(pkey=repository_id, columns='$full_name')
+        full_name, organization_id = repo_tbl.readColumns(pkey=repository_id,
+                                                          columns='$full_name,$organization_id')
         if not full_name:
             return
 
         owner, repo_name = full_name.split('/')
 
-        github_service = self.db.package('gnrgh').getGithubClient()
+        github_service = self.db.package('gnrgh').getGithubClient(organization_id=organization_id)
         labels = github_service.getRepositoryLabels(owner=owner, repo=repo_name)
 
         label_tbl.syncLabels(labels, repository_id=repository_id)
@@ -616,7 +620,8 @@ class Form(BaseComponent):
         repo_tbl = self.db.table('gnrgh.repository')
         topic_link_tbl = self.db.table('gnrgh.gh_topic_link')
 
-        full_name = repo_tbl.readColumns(pkey=repository_id, columns='$full_name')
+        full_name, organization_id = repo_tbl.readColumns(pkey=repository_id,
+                                                          columns='$full_name,$organization_id')
         if not full_name:
             return
 
@@ -632,7 +637,7 @@ class Form(BaseComponent):
         topics = [row['topic_name'] for row in local_topics]
 
         # Push to GitHub
-        github_service = self.db.package('gnrgh').getGithubClient()
+        github_service = self.db.package('gnrgh').getGithubClient(organization_id=organization_id)
         github_service.setRepositoryTopics(owner=owner, repo=repo_name, topics=topics)
 
     @public_method
@@ -641,7 +646,8 @@ class Form(BaseComponent):
         repo_tbl = self.db.table('gnrgh.repository')
         connection_tbl = self.db.table('gnrgh.gh_user_connection')
 
-        full_name = repo_tbl.readColumns(pkey=repository_id, columns='$full_name')
+        full_name, organization_id = repo_tbl.readColumns(pkey=repository_id,
+                                                          columns='$full_name,$organization_id')
         if not full_name:
             return
 
@@ -654,7 +660,7 @@ class Form(BaseComponent):
             repository_id=repository_id
         ).fetch()
 
-        github_service = self.db.package('gnrgh').getGithubClient()
+        github_service = self.db.package('gnrgh').getGithubClient(organization_id=organization_id)
 
         for collab in local_collaborators:
             login = collab['@gh_user_id.login']

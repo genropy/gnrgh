@@ -124,7 +124,7 @@ class Table(object):
         if action == 'deleted':
             pkey = self.pkeyFromExternal(git_host_id, comment_data.get('id'))
             if pkey:
-                self.delete({'id': pkey})
+                self.deleteSelection(where='$id=:p', p=pkey)
             return None
 
         issue_id = self.db.table('gnrgh.issue').pkeyFromExternal(

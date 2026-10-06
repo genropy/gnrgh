@@ -19,13 +19,18 @@ class GnrCustomWebPage(object):
 
         The url of the webhook names the server: /ep/receiveWebhook/<git_host_id>.
         Without git_host_id (webhooks configured before git_host existed) the
-        event is attributed to github.com.
+        event is attributed to github.com; a Forgejo event without git_host_id
+        is rejected. The signature is checked with the secret of that host.
         """
-        # Get the webhook secret from package preferences
-        webhook_secret = self.db.application.getPreference('webhook_secret', pkg='gnrgh')
-
+        git_host_tbl = self.db.table('gnrgh.git_host')
+        if not git_host_id:
+            # Forgejo sends the GitHub headers too, plus its own X-Forgejo-*
+            if self.request.get_header('X-Forgejo-Event'):
+                raise GnrException('!![en]Forgejo webhooks need the git_host_id in their url')
+            git_host_id = git_host_tbl.githubHost()
+        webhook_secret = git_host_tbl.readColumns(pkey=git_host_id, columns='$webhook_secret')
         if not webhook_secret:
-            raise GnrException('!![en]GitHub webhook secret is not configured')
+            raise GnrException('!![en]Webhook secret is not configured for this git host')
 
         # Get GitHub webhook headers
         github_signature = self.request.get_header('X-Hub-Signature-256')
@@ -61,8 +66,6 @@ class GnrCustomWebPage(object):
         except (json.JSONDecodeError, UnicodeDecodeError) as e:
             raise GnrException(f'!![en]Failed to parse webhook payload: {str(e)}')           
 
-        if not git_host_id:
-            git_host_id = self.db.table('gnrgh.git_host').githubHost()
         stored = self.db.table('gnrgh.webhook_event').storeEvent(
             payload_data, git_host_id=git_host_id, event=event_type, delivery_id=delivery_id,
             received_at=datetime.now(timezone.utc))

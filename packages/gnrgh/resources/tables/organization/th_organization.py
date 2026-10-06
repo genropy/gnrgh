@@ -138,7 +138,7 @@ class Form(BaseComponent):
         org_tbl = self.db.table('gnrgh.organization')
         login = org_tbl.readColumns(pkey=organization_id, columns='$login')
 
-        github_service = self.db.package('gnrgh').getGithubClient()
+        github_service = self.db.package('gnrgh').getGithubClient(organization_id=organization_id)
         connection_tbl = self.db.table('gnrgh.gh_user_connection')
         user_tbl = self.db.table('gnrgh.gh_user')
 
@@ -172,6 +172,11 @@ class Form(BaseComponent):
 
         An account whose login matches an existing adm.user username is linked
         to that user; otherwise a new adm.user is created with status 'wait'.
+        An adm.user already linked to another account of the same git_host is
+        skipped and reported: one account per host (gh_user.adm_user_host).
+
+        Returns:
+            dict(created=<int>, skipped=[<login>, ...])
         """
         if not connection_pkeys:
             return
@@ -181,13 +186,14 @@ class Form(BaseComponent):
         adm_user_tbl = self.db.table('adm.user')
 
         created_count = 0
+        skipped = []
         for connection_id in connection_pkeys:
             gh_user_id = connection_tbl.readColumns(pkey=connection_id, columns='$gh_user_id')
             if not gh_user_id:
                 continue
 
-            login, adm_user_id = gh_user_tbl.readColumns(pkey=gh_user_id,
-                                                         columns='$login,$adm_user_id')
+            login, adm_user_id, git_host_id = gh_user_tbl.readColumns(
+                pkey=gh_user_id, columns='$login,$adm_user_id,$git_host_id')
             if adm_user_id or not login:
                 continue
 
@@ -198,6 +204,12 @@ class Form(BaseComponent):
             ).fetch()
             if existing:
                 adm_user_id = existing[0]['id']
+                taken = gh_user_tbl.query(
+                    where='$adm_user_id=:u AND $git_host_id=:h',
+                    u=adm_user_id, h=git_host_id, columns='$id').fetch()
+                if taken:
+                    skipped.append(login)
+                    continue
             else:
                 adm_user_id = adm_user_tbl.insert(adm_user_tbl.newrecord(
                     username=login,
@@ -208,7 +220,7 @@ class Form(BaseComponent):
                 rec['adm_user_id'] = adm_user_id
 
         self.db.commit()
-        return created_count
+        return dict(created=created_count, skipped=skipped)
 
     @public_method
     def rpc_org_syncArtifacts(self, organization_id=None):
@@ -216,7 +228,7 @@ class Form(BaseComponent):
         org_tbl = self.db.table('gnrgh.organization')
         login = org_tbl.readColumns(pkey=organization_id, columns='$login')
 
-        github_service = self.db.package('gnrgh').getGithubClient()
+        github_service = self.db.package('gnrgh').getGithubClient(organization_id=organization_id)
         packages = github_service.getPackages(organization=login)
 
         artifact_tbl = self.db.table('gnrgh.gh_artifact')

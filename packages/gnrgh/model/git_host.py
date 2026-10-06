@@ -17,6 +17,7 @@ class Table(object):
         tbl.column('type', size=':10', name_long='!![en]Type', validate_notnull=True,
                    values='github:GitHub,forgejo:Forgejo')
         tbl.column('token', name_long='!![en]Token')
+        tbl.column('webhook_secret', name_long='!![en]Webhook Secret')
 
     @metadata(mandatory=True)
     def sysRecord_GITHUB(self):
@@ -31,11 +32,15 @@ class Table(object):
     def getClient(self, git_host_id):
         """Return a GithubClient for the host.
 
-        A host without token falls back to the local gh CLI token
-        (GithubClient.get_local_gh_token).
+        Only github.com without token falls back to the local gh CLI token
+        (GithubClient.get_local_gh_token): that token must never reach
+        another server.
         """
         from gnrpkg.gnrgh.github_client import GithubClient
-        url, token = self.readColumns(pkey=git_host_id, columns='$url,$token')
+        url, token, description = self.readColumns(pkey=git_host_id,
+                                                   columns='$url,$token,$description')
+        if not token and url != GITHUB_API_URL:
+            raise ValueError(f'git_host {description} ({url}) has no token')
         return GithubClient(access_token=token or None, api_url=url)
 
     def webUrl(self, git_host_id):

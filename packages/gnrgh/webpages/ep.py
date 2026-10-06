@@ -29,11 +29,12 @@ class GnrCustomWebPage(object):
         raw_body = self.request.get_data(cache=True)
         if isinstance(raw_body, str):
             raw_body = raw_body.encode('utf-8')
+        payload_data = self._parse_payload(raw_body)
         if not git_host_id:
             # Forgejo sends the GitHub headers too, plus its own X-Forgejo-*
             if self.request.get_header('X-Forgejo-Event'):
                 git_host_id = git_host_tbl.hostFromWebUrl(
-                    (self._parse_payload(raw_body).get('repository') or {}).get('html_url'))
+                    (payload_data.get('repository') or {}).get('html_url'))
                 if not git_host_id:
                     raise GnrException('!![en]Forgejo webhook: no git_host matches the repository url')
             else:
@@ -60,7 +61,6 @@ class GnrCustomWebPage(object):
         if not hmac.compare_digest(github_signature, expected_signature):
             raise GnrException('!![en]Invalid webhook signature')
 
-        payload_data = self._parse_payload(raw_body)
 
         stored = self.db.table('gnrgh.webhook_event').storeEvent(
             payload_data, git_host_id=git_host_id, event=event_type, delivery_id=delivery_id,

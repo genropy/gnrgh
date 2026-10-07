@@ -5,7 +5,8 @@ from gnr.core.gnrbag import Bag
 class Table(object):
     def config_db(self, pkg):
         tbl = pkg.table('webhook_event', pkey='id', name_long='!![en]Webhook Event',
-                        name_plural='!![en]Webhook Events', caption_field='delivery_id')
+                        name_plural='!![en]Webhook Events', caption_field='delivery_id',
+                        retention_policy=('__ins_ts', 7))
         self.sysFields(tbl)
 
         # GitHub delivery identity

@@ -113,7 +113,8 @@ class GithubClient(object):
         error_msg = f"GitHub API error ({operation}): HTTP {response.status_code}"
         try:
             error_data = response.json()
-            if 'message' in error_data:
+            # Forgejo answers some 404s with a JSON 'null' body
+            if isinstance(error_data, dict) and 'message' in error_data:
                 error_msg = f"{error_msg} - {error_data['message']}"
         except (ValueError, KeyError):
             error_msg = f"{error_msg} - {response.content.decode('utf-8', errors='ignore')}"

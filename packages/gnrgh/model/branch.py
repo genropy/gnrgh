@@ -120,8 +120,10 @@ class Table(object):
         if not repository_id:
             return None
 
+        # GitHub sends the bare branch name, Forgejo the full 'refs/heads/<name>'
+        branch_name = (payload.get('ref') or '').removeprefix('refs/heads/')
+
         if action == 'create' and event_type == 'branch':
-            branch_name = payload.get('ref')
             if branch_name:
                 # The push of a new branch often arrives a few ms before its
                 # 'create' event: the branch then exists with the pushed sha,
@@ -139,7 +141,6 @@ class Table(object):
                 return branch_rec['id']
 
         elif action == 'delete' and event_type == 'branch':
-            branch_name = payload.get('ref')
             if branch_name:
                 recs = self.query(
                     where='$repository_id=:repo_id AND $name=:bname',

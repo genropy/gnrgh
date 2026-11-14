@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 from dateutil.relativedelta import relativedelta
 
 from gnr.core.gnrbag import Bag
+from gnrpkg.gnrgh.github_client import GithubNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -299,11 +300,18 @@ class GitHandler(object):
                             kw_br = {}
                             if since_date:
                                 kw_br['since'] = since_date.isoformat()
-                            br_commits = list(service.getCommits(
-                                owner=owner, repo=repo_name,
-                                sha=br['name'],
-                                per_page=min(max_count or 100, 100),
-                                **kw_br))
+                            try:
+                                br_commits = list(service.getCommits(
+                                    owner=owner, repo=repo_name,
+                                    sha=br['name'],
+                                    per_page=min(max_count or 100, 100),
+                                    **kw_br))
+                            except GithubNotFoundError:
+                                # the branch is still in the db but was deleted
+                                # on the remote: the other branches go on
+                                logger.warning('sync_repo: branch %s of %s not found on the remote',
+                                               br['name'], full_name)
+                                continue
                             if max_count and not since_date:
                                 br_commits = br_commits[:max_count]
                             for c_data in br_commits:

@@ -120,19 +120,27 @@ class Table(object):
         if not repository_id:
             return None
 
+        # GitHub sends the bare branch name, Forgejo the full 'refs/heads/<name>'
+        branch_name = (payload.get('ref') or '').removeprefix('refs/heads/')
+
         if action == 'create' and event_type == 'branch':
-            branch_name = payload.get('ref')
             if branch_name:
-                with self.recordToUpdate(repository_id=repository_id, name=branch_name,
-                                         insertMissing=True) as branch_rec:
-                    branch_rec['repository_id'] = repository_id
-                    branch_rec['name'] = branch_name
-                    branch_rec['commit_sha'] = None  # will be set by the first push event
+                # The push of a new branch often arrives a few ms before its
+                # 'create' event: the branch then exists with the pushed sha,
+                # which the 'create' event (no sha in its payload) must keep.
+                existing = self.query(
+                    where='$repository_id=:repo_id AND $name=:bname',
+                    repo_id=repository_id, bname=branch_name, columns='$id'
+                ).fetch()
+                if existing:
+                    return existing[0]['id']
+                branch_rec = dict(repository_id=repository_id, name=branch_name,
+                                  commit_sha=None)  # set by the first push event
+                self.insert(branch_rec)
                 self.db.commit()
                 return branch_rec['id']
 
         elif action == 'delete' and event_type == 'branch':
-            branch_name = payload.get('ref')
             if branch_name:
                 recs = self.query(
                     where='$repository_id=:repo_id AND $name=:bname',
